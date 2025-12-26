@@ -5,8 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getBird, loveBird, unloveBird } from "@/services/bird.service";
 import { getBirdStories } from "@/services/story.service";
+import { getKindWords } from "@/services/kind-words.service";
 import { useAuth } from "@/contexts/auth-context";
 import { StoryCard } from "@/components/story-card";
+import { KindWordsSection } from "@/components/kind-words";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
@@ -18,7 +20,7 @@ export default function BirdDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const birdId = params.id as string;
 
   const { data: bird, isLoading, error } = useQuery({
@@ -30,6 +32,12 @@ export default function BirdDetailPage() {
   const { data: storiesData, isLoading: storiesLoading } = useQuery({
     queryKey: ["birdStories", birdId],
     queryFn: () => getBirdStories(birdId),
+    enabled: !!birdId && isAuthenticated,
+  });
+
+  const { data: kindWordsData } = useQuery({
+    queryKey: ["kindWords", birdId],
+    queryFn: () => getKindWords(birdId),
     enabled: !!birdId && isAuthenticated,
   });
 
@@ -64,6 +72,8 @@ export default function BirdDetailPage() {
       </div>
     );
   }
+
+  const isOwner = user?.userId === bird.ownerId;
 
   return (
     <div className="min-h-screen-safe flex flex-col">
@@ -180,6 +190,19 @@ export default function BirdDetailPage() {
                 </span>
               </Button>
             </Link>
+          )}
+
+          {/* Kind Words Section */}
+          {kindWordsData && (
+            <div className="pt-4">
+              <KindWordsSection
+                birdId={birdId}
+                birdName={bird.name}
+                initialData={kindWordsData}
+                currentUserId={user?.userId}
+                isOwner={isOwner}
+              />
+            </div>
           )}
 
           {/* Stories Section */}
