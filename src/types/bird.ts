@@ -24,6 +24,7 @@ export type Bird = {
   supportedBy: number;
   ownerId: string;
   ownerName?: string;
+  ownerWalletAddress?: string; // Solana wallet to receive support payments
   age?: string;
   location?: string;
   isLoved?: boolean;
@@ -42,8 +43,10 @@ export type BirdSupport = {
   supportId: string;
   birdId: string;
   userId: string;
+  userName?: string;
   amount: number;
   message?: string;
+  transactionSignature?: string; // Solana transaction signature
   createdAt: string;
 };
 
@@ -70,12 +73,18 @@ export type CreateBirdDto = {
   videoS3Key?: string;
   age?: string;
   location?: string;
+  walletAddress: string; // Required: Solana wallet to receive support
 };
 
-export type UpdateBirdDto = Partial<CreateBirdDto>;
+export type UpdateBirdDto = Partial<Omit<CreateBirdDto, 'walletAddress'>> & {
+  walletAddress?: string; // Optional on update
+};
 
 export type SupportBirdDto = {
   birdId: string;
   amount: number;
   message?: string;
 };
+
+// Platform fee configuration
+export const PLATFORM_FEE_PERCENT = 5; // 5% optional platform fee

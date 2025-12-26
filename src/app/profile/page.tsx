@@ -61,7 +61,7 @@ export default function ProfilePage() {
               {user.profileImageUrl ? (
                 <Image
                   src={user.profileImageUrl}
-                  alt={user.name}
+                  alt={user.name || "User"}
                   fill
                   className="object-cover"
                 />

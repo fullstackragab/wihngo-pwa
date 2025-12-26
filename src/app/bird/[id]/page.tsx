@@ -83,7 +83,7 @@ export default function BirdDetailPage() {
           {bird.coverImageUrl || bird.imageUrl ? (
             <Image
               src={bird.coverImageUrl || bird.imageUrl || ""}
-              alt={bird.name}
+              alt={bird.name || "Bird"}
               fill
               className="object-cover"
             />
@@ -193,7 +193,7 @@ export default function BirdDetailPage() {
           )}
 
           {/* Kind Words Section */}
-          {kindWordsData && (
+          {kindWordsData?.isEnabled && (
             <div className="pt-4">
               <KindWordsSection
                 birdId={birdId}

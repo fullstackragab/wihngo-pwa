@@ -9,7 +9,9 @@
       "Bash(npm run build:*)",
       "Bash(tasklist)",
       "Bash(findstr:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(grep:*)",
+      "Bash(xargs -I{} sh -c 'echo \"\"=== {} ===\"\" && grep -n \"\"<Image\"\" \"\"{}\"\" | head -5')"
     ]
   }
 }

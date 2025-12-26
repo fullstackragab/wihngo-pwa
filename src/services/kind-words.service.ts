@@ -60,7 +60,7 @@ export async function updateKindWordsSettings(
   birdId: string,
   settings: Partial<KindWordsSettings>
 ): Promise<KindWordsSettings> {
-  return apiHelper.patch<KindWordsSettings>(`birds/${birdId}/kind-words/settings`, settings);
+  return apiHelper.put<KindWordsSettings>(`birds/${birdId}/kind-words/settings`, settings);
 }
 
 /**

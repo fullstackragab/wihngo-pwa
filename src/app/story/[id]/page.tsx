@@ -144,7 +144,7 @@ export default function StoryDetailPage() {
           ) : hasImage ? (
             <Image
               src={story.imageUrl!}
-              alt=""
+              alt="Story image"
               fill
               className="object-cover"
             />

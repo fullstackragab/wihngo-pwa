@@ -29,13 +29,13 @@ export function KindWordsSection({
   onKindWordDeleted,
   onUserBlocked,
 }: KindWordsSectionProps) {
-  const [items, setItems] = useState<KindWord[]>(initialData.items);
-  const [remainingToday, setRemainingToday] = useState(initialData.remainingToday);
+  const [items, setItems] = useState<KindWord[]>(initialData?.items ?? []);
+  const [remainingToday, setRemainingToday] = useState(initialData?.remainingToday ?? 3);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Don't render anything if kind words are disabled
-  if (!initialData.isEnabled) {
+  // Don't render anything if kind words are disabled or data not loaded
+  if (!initialData?.isEnabled) {
     return null;
   }
 

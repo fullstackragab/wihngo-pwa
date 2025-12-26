@@ -20,7 +20,7 @@ export function BirdCard({ bird, variant = "default" }: BirdCardProps) {
             {bird.imageUrl ? (
               <Image
                 src={bird.imageUrl}
-                alt={bird.name}
+                alt={bird.name || "Bird"}
                 fill
                 className="object-cover"
               />
@@ -52,7 +52,7 @@ export function BirdCard({ bird, variant = "default" }: BirdCardProps) {
               {bird.imageUrl ? (
                 <Image
                   src={bird.imageUrl}
-                  alt={bird.name}
+                  alt={bird.name || "Bird"}
                   width={128}
                   height={128}
                   className="w-full h-full object-cover"
@@ -99,7 +99,7 @@ export function BirdCard({ bird, variant = "default" }: BirdCardProps) {
           {bird.imageUrl ? (
             <Image
               src={bird.imageUrl}
-              alt={bird.name}
+              alt={bird.name || "Bird"}
               fill
               className="object-cover"
             />

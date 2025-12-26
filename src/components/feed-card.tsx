@@ -41,7 +41,7 @@ export function FeedCard({ moment, onBirdClick, onSupportClick }: FeedCardProps)
         {moment.mediaType === "photo" ? (
           <Image
             src={moment.mediaUrl}
-            alt={moment.caption}
+            alt={moment.caption || "Moment"}
             fill
             className="object-cover"
             unoptimized

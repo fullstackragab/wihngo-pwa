@@ -33,7 +33,7 @@ export function StoryCard({ story }: StoryCardProps) {
             ) : story.imageUrl ? (
               <Image
                 src={story.imageUrl}
-                alt=""
+                alt={`Story about ${story.birds.join(", ")}`}
                 fill
                 className="object-cover"
               />

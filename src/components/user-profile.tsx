@@ -77,7 +77,7 @@ export function UserProfile({
                     <div className="aspect-square bg-muted relative">
                       <Image
                         src={bird.imageUrl}
-                        alt={bird.name}
+                        alt={bird.name || "Bird"}
                         fill
                         className="object-cover"
                         unoptimized

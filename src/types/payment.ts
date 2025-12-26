@@ -37,21 +37,40 @@ export interface PaymentPreflightResponse {
 }
 
 export interface CreatePaymentIntentRequest {
-  recipientUserId: string;
-  amountUsdc: number;
-  memo?: string;
+  birdId: string;
+  supportAmount: number;
+  platformSupportAmount?: number;
+  currency?: string;
+  walletAddress: string;
+}
+
+export interface WalletBalance {
+  walletAddress: string;
+  solBalance: number;
+  usdcBalance: number;
+  hasMinimumSol: boolean;
+  canAfford: (amount: number) => boolean;
+}
+
+export interface BalanceCheckResponse {
+  walletAddress: string;
+  solBalance: number;
+  usdcBalance: number;
+  minimumSolRequired: number;
 }
 
 export interface PaymentIntent {
   paymentId: string;
-  serializedTransaction: string;
-  amountUsdc: number;
-  feeUsdc: number;
-  totalUsdc: number;
-  gasSponsored: boolean;
-  expiresAt: string;
-  recipientName: string;
-  recipientWallet: string;
+  status: PaymentIntentStatus;
+  supportAmount: number;
+  platformSupportAmount?: number;
+  totalAmount: number;
+  currency: string;
+  birdId: string;
+  birdName?: string;
+  serializedTransaction?: string;
+  expiresAt?: string;
+  createdAt: string;
 }
 
 export interface PaymentStatus {

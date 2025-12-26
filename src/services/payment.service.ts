@@ -63,25 +63,3 @@ export async function unlinkWallet(walletId: string): Promise<void> {
 export async function getBalance(): Promise<UserBalance> {
   return apiHelper.get<UserBalance>("wallets/balance");
 }
-
-export async function createDonationIntent(
-  birdId: string,
-  amountUsdc: number,
-  message?: string
-): Promise<PaymentIntent> {
-  return apiHelper.post<PaymentIntent>("donations/intents", {
-    birdId,
-    amountUsdc,
-    message,
-  });
-}
-
-export async function getDonationStatus(donationId: string): Promise<PaymentStatus> {
-  return apiHelper.get<PaymentStatus>(`donations/intents/${donationId}`);
-}
-
-export async function submitDonation(
-  data: SubmitPaymentRequest
-): Promise<SubmitPaymentResponse> {
-  return apiHelper.post<SubmitPaymentResponse>("donations/submit", data);
-}

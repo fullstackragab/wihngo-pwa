@@ -94,7 +94,7 @@ function DonationContent() {
               {bird.imageUrl ? (
                 <Image
                   src={bird.imageUrl}
-                  alt={bird.name}
+                  alt={bird.name || "Bird"}
                   width={400}
                   height={300}
                   className="w-full h-full object-cover"
