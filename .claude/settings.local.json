@@ -11,7 +11,8 @@
       "Bash(findstr:*)",
       "Bash(node:*)",
       "Bash(grep:*)",
-      "Bash(xargs -I{} sh -c 'echo \"\"=== {} ===\"\" && grep -n \"\"<Image\"\" \"\"{}\"\" | head -5')"
+      "Bash(xargs -I{} sh -c 'echo \"\"=== {} ===\"\" && grep -n \"\"<Image\"\" \"\"{}\"\" | head -5')",
+      "Bash(cat:*)"
     ]
   }
 }
