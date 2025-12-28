@@ -1,8 +1,12 @@
-export type PremiumStyle = {
-  frameId?: string;
-  badgeId?: string;
-  highlightColor?: string;
-};
+/**
+ * Bird Types
+ *
+ * CORE PRINCIPLE: All birds are equal.
+ * - No premium birds
+ * - No boosted visibility
+ * - No paid prioritization
+ * - Support is guided by need, not money
+ */
 
 export type BirdActivityStatus = "Active" | "Quiet" | "Inactive" | "Memorial";
 
@@ -31,8 +35,6 @@ export type Bird = {
   isSupported?: boolean;
   totalSupport?: number;
   isMemorial?: boolean;
-  isPremium?: boolean;
-  premiumStyle?: PremiumStyle;
   activityStatus?: BirdActivityStatus;
   lastSeenText?: string;
   canSupport?: boolean;
@@ -85,6 +87,3 @@ export type SupportBirdDto = {
   amount: number;
   message?: string;
 };
-
-// Platform fee configuration
-export const PLATFORM_FEE_PERCENT = 5; // 5% optional platform fee

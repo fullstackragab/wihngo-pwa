@@ -2,20 +2,23 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Heart, MapPin, Users } from "lucide-react";
+import { Heart } from "lucide-react";
 import { Bird } from "@/types/bird";
+import { Button } from "@/components/ui/button";
+import { motion } from "motion/react";
 
 interface BirdCardProps {
   bird: Bird;
-  variant?: "default" | "compact" | "gallery";
+  onSupport?: (bird: Bird) => void;
+  variant?: "default" | "compact" | "feed";
 }
 
-export function BirdCard({ bird, variant = "default" }: BirdCardProps) {
+export function BirdCard({ bird, onSupport, variant = "default" }: BirdCardProps) {
   // Compact variant for inline lists
   if (variant === "compact") {
     return (
       <Link href={`/bird/${bird.birdId}`}>
-        <div className="flex items-center gap-3 p-3 bg-card rounded-2xl border border-border hover:shadow-sm transition-all">
+        <div className="flex items-center gap-3 p-3 bg-card rounded-2xl border border-border/50 hover:shadow-sm transition-all">
           <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
             {bird.imageUrl ? (
               <Image
@@ -32,109 +35,112 @@ export function BirdCard({ bird, variant = "default" }: BirdCardProps) {
             <h3 className="font-medium text-foreground truncate">{bird.name}</h3>
             <p className="text-sm text-muted-foreground truncate">{bird.species}</p>
           </div>
-          <div className="flex items-center gap-1 text-heart-red">
-            <Heart className="w-4 h-4 fill-current" />
-            <span className="text-sm">{bird.lovedBy}</span>
+          <div className="flex items-center gap-1 text-primary">
+            <Heart className="w-4 h-4" />
+            <span className="text-sm">{bird.lovedBy || bird.supportedBy || 0}</span>
           </div>
         </div>
       </Link>
     );
   }
 
-  // Gallery variant - matches Figma BirdGalleryScreen card
-  if (variant === "gallery") {
+  // Feed variant - matches Figma BirdCard design
+  if (variant === "feed") {
     return (
-      <Link href={`/bird/${bird.birdId}`}>
-        <button className="w-full bg-card rounded-3xl overflow-hidden border border-border shadow-sm hover:shadow-md transition-all hover:scale-[1.01] text-left">
-          <div className="flex gap-4">
-            {/* Image */}
-            <div className="w-32 h-32 flex-shrink-0 overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -4 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="bg-card rounded-xl overflow-hidden border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+          <Link href={`/bird/${bird.birdId}`}>
+            <div className="aspect-[4/3] overflow-hidden bg-muted">
               {bird.imageUrl ? (
                 <Image
                   src={bird.imageUrl}
                   alt={bird.name || "Bird"}
-                  width={128}
-                  height={128}
+                  width={400}
+                  height={300}
                   className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-                  <span className="text-3xl">🐦</span>
+                  <span className="text-4xl">🐦</span>
                 </div>
               )}
             </div>
-
-            {/* Content */}
-            <div className="flex-1 py-4 pr-4 space-y-2">
-              <h3 className="text-lg font-medium text-foreground">{bird.name}</h3>
-
-              <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                {bird.tagline || bird.description || `A beautiful ${bird.species}`}
-              </p>
-
-              <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
-                {bird.location && (
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    <span>{bird.location}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-1">
-                  <Heart className="w-3 h-3" />
-                  <span>{bird.supportedBy} supporters</span>
-                </div>
+          </Link>
+          <div className="p-5 space-y-3">
+            <Link href={`/bird/${bird.birdId}`}>
+              <h3>{bird.name}</h3>
+            </Link>
+            <p className="text-muted-foreground line-clamp-2">
+              {bird.tagline || bird.description || `A beautiful ${bird.species} who needs your support.`}
+            </p>
+            {bird.supportedBy !== undefined && bird.supportedBy > 0 && (
+              <div className="flex items-center gap-2 text-sm text-foreground/70">
+                <Heart className="w-4 h-4 text-primary" />
+                <span>{bird.supportedBy} supporters</span>
               </div>
-            </div>
+            )}
+            <Button
+              onClick={(e) => {
+                e.preventDefault();
+                if (onSupport) {
+                  onSupport(bird);
+                } else {
+                  window.location.href = `/donation?birdId=${bird.birdId}`;
+                }
+              }}
+              className="w-full rounded-full gap-2"
+              variant="default"
+            >
+              <Heart className="w-4 h-4" />
+              Support {bird.name}
+            </Button>
           </div>
-        </button>
-      </Link>
+        </div>
+      </motion.div>
     );
   }
 
-  // Default variant - card with image
+  // Default variant - card with image (original design)
   return (
     <Link href={`/bird/${bird.birdId}`}>
-      <div className="bg-card rounded-3xl overflow-hidden border border-border shadow-sm hover:shadow-md transition-all">
-        <div className="relative aspect-[4/3] bg-muted">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -4 }}
+        transition={{ duration: 0.3 }}
+        className="bg-card rounded-xl overflow-hidden border border-border/50 shadow-sm hover:shadow-md transition-shadow"
+      >
+        <div className="aspect-[4/3] overflow-hidden bg-muted">
           {bird.imageUrl ? (
             <Image
               src={bird.imageUrl}
               alt={bird.name || "Bird"}
-              fill
-              className="object-cover"
+              width={400}
+              height={300}
+              className="w-full h-full object-cover"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
               <span className="text-4xl">🐦</span>
             </div>
           )}
-          {bird.isMemorial && (
-            <div className="absolute top-2 left-2 bg-foreground/70 text-card px-2 py-1 rounded-full text-xs">
-              In Memory
-            </div>
-          )}
         </div>
-        <div className="p-5 space-y-2">
-          <h3 className="font-medium text-foreground text-lg">{bird.name}</h3>
-          {bird.tagline && (
-            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-              {bird.tagline}
-            </p>
-          )}
-          <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
-            {bird.location && (
-              <div className="flex items-center gap-1">
-                <MapPin className="w-3 h-3" />
-                <span>{bird.location}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-1">
-              <Heart className="w-3 h-3" />
-              <span>{bird.supportedBy} supporters</span>
-            </div>
+        <div className="p-5 space-y-3">
+          <h3>{bird.name}</h3>
+          <p className="text-muted-foreground line-clamp-2">
+            {bird.tagline || bird.description || `A beautiful ${bird.species}`}
+          </p>
+          <div className="flex items-center gap-2 text-sm text-foreground/70">
+            <Heart className="w-4 h-4 text-primary" />
+            <span>{bird.supportedBy || 0} supporters</span>
           </div>
         </div>
-      </div>
+      </motion.div>
     </Link>
   );
 }

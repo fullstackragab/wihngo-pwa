@@ -10,11 +10,11 @@ import { useAuth } from "@/contexts/auth-context";
 import { StoryCard } from "@/components/story-card";
 import { KindWordsSection } from "@/components/kind-words";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
-import { ArrowLeft, Heart, Users, MapPin } from "lucide-react";
+import { ArrowLeft, Heart, MapPin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { motion } from "motion/react";
 
 export default function BirdDetailPage() {
   const params = useParams();
@@ -64,7 +64,7 @@ export default function BirdDetailPage() {
 
   if (error || !bird) {
     return (
-      <div className="min-h-screen-safe flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-destructive mb-4">Failed to load bird</p>
           <Button onClick={() => router.back()}>Go Back</Button>
@@ -76,95 +76,117 @@ export default function BirdDetailPage() {
   const isOwner = user?.userId === bird.ownerId;
 
   return (
-    <div className="min-h-screen-safe flex flex-col">
-      {/* Bird Image - Figma BirdProfileScreen style */}
-      <div className="relative">
-        <div className="aspect-[3/4] max-h-[60vh] overflow-hidden">
+    <div className="min-h-screen bg-background">
+      {/* Header with Back Button */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+        <div className="max-w-2xl mx-auto px-4 py-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+            className="rounded-full"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 pb-8">
+        {/* Bird Image */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="relative rounded-3xl overflow-hidden shadow-lg mb-6"
+        >
           {bird.coverImageUrl || bird.imageUrl ? (
             <Image
               src={bird.coverImageUrl || bird.imageUrl || ""}
               alt={bird.name || "Bird"}
-              fill
-              className="object-cover"
+              width={600}
+              height={480}
+              className="w-full h-80 object-cover"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+            <div className="w-full h-80 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
               <span className="text-6xl">🐦</span>
             </div>
           )}
-        </div>
+          {bird.isMemorial && (
+            <div className="absolute top-4 right-4 bg-foreground/70 text-card px-3 py-1 rounded-full text-sm">
+              In Memory
+            </div>
+          )}
+        </motion.div>
 
-        {/* Back Button Overlay */}
-        <button
-          onClick={() => router.back()}
-          className="absolute top-6 left-6 pt-safe bg-card/90 backdrop-blur-sm text-foreground px-4 py-2 rounded-full shadow-lg hover:bg-card transition-colors"
+        {/* Bird Info */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="space-y-6"
         >
-          ← Back
-        </button>
-
-        {/* Memorial Badge */}
-        {bird.isMemorial && (
-          <div className="absolute top-6 right-6 pt-safe bg-foreground/70 text-card px-3 py-1 rounded-full text-sm">
-            In Memory
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 bg-background rounded-t-[2rem] -mt-6 relative z-10 px-6 py-8">
-        <div className="max-w-md mx-auto space-y-6">
-          {/* Header */}
-          <div className="space-y-3">
-            <div className="flex items-start justify-between">
-              <h1 className="text-3xl font-medium">{bird.name}</h1>
-              <button
-                onClick={() => loveMutation.mutate()}
-                disabled={loveMutation.isPending}
-                className="p-2 -mr-2"
-              >
-                <Heart
-                  className={`w-7 h-7 transition-colors ${
-                    bird.isLoved
-                      ? "text-heart-red fill-heart-red"
-                      : "text-muted"
-                  }`}
-                />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              {bird.location && (
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  <span>{bird.location}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                <span>{bird.supportedBy} supporters</span>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="mb-2">{bird.name}</h1>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <MapPin className="w-4 h-4" />
+                <span>{bird.location || "Safe haven needed"}</span>
               </div>
             </div>
+            <button
+              onClick={() => loveMutation.mutate()}
+              disabled={loveMutation.isPending}
+              className="p-2"
+            >
+              <Heart
+                className={`w-7 h-7 transition-colors ${
+                  bird.isLoved
+                    ? "text-primary fill-primary"
+                    : "text-muted-foreground"
+                }`}
+              />
+            </button>
           </div>
 
-          {/* Story Card - Figma style */}
+          {/* Story */}
           {(bird.tagline || bird.description) && (
-            <div className="bg-card rounded-2xl p-5 border border-border space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Heart className="w-4 h-4" />
-                <span>Story</span>
-              </div>
-              <p className="leading-relaxed text-foreground">
+            <div className="space-y-2">
+              <h3 className="text-foreground/90">Story</h3>
+              <p className="text-foreground/70 leading-relaxed">
                 {bird.description || bird.tagline}
               </p>
             </div>
           )}
 
-          {/* Support Info - Figma accent box style */}
+          {/* Needs/Info */}
+          {bird.species && (
+            <div className="space-y-2">
+              <h3 className="text-foreground/90">Species</h3>
+              <p className="text-foreground/70">{bird.species}</p>
+            </div>
+          )}
+
+          {/* Support Progress */}
+          {bird.supportedBy !== undefined && bird.supportedBy > 0 && (
+            <div className="bg-muted/50 rounded-2xl p-5 space-y-3">
+              <div className="flex justify-between items-baseline">
+                <span className="text-foreground/70">Supporters</span>
+                <span className="text-foreground font-medium">
+                  {bird.supportedBy} people
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Support Button */}
           {bird.canSupport !== false && !bird.isMemorial && (
-            <div className="bg-accent/30 rounded-2xl p-4 border border-accent">
-              <p className="text-sm text-accent-foreground">
-                Your support helps provide daily care, food, and a safe environment for {bird.name}.
-              </p>
+            <div className="pt-4">
+              <Link href={`/donation?birdId=${bird.birdId}`}>
+                <Button size="lg" className="w-full rounded-full gap-2">
+                  <Heart className="w-4 h-4" />
+                  Support {bird.name}
+                </Button>
+              </Link>
             </div>
           )}
 
@@ -176,20 +198,11 @@ export default function BirdDetailPage() {
             </div>
           )}
 
-          {/* Support Button - Figma style */}
+          {/* Reassurance */}
           {bird.canSupport !== false && !bird.isMemorial && (
-            <Link href={`/donation?birdId=${bird.birdId}&birdName=${encodeURIComponent(bird.name)}&birdImage=${encodeURIComponent(bird.imageUrl || "")}`}>
-              <Button
-                fullWidth
-                size="lg"
-                variant="secondary"
-              >
-                <span className="flex items-center gap-2">
-                  Support {bird.name}
-                  <span className="text-lg">🐦</span>
-                </span>
-              </Button>
-            </Link>
+            <p className="text-center text-sm text-muted-foreground">
+              100% of your support goes directly to help this bird
+            </p>
           )}
 
           {/* Kind Words Section */}
@@ -213,7 +226,7 @@ export default function BirdDetailPage() {
                 <LoadingSpinner />
               </div>
             ) : !storiesData?.items || storiesData.items.length === 0 ? (
-              <div className="bg-card rounded-2xl border border-border text-center py-8">
+              <div className="bg-card rounded-2xl border border-border/50 text-center py-8">
                 <p className="text-muted-foreground">No stories yet</p>
               </div>
             ) : (
@@ -224,7 +237,7 @@ export default function BirdDetailPage() {
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

@@ -19,7 +19,26 @@ export function OurPrinciples({ onBack }: OurPrinciplesProps) {
           </p>
         </div>
 
+        {/* Core Principle - All Birds Are Equal */}
+        <Card className="p-6 bg-primary/5 border-primary/20">
+          <div className="space-y-2">
+            <h3 className="text-primary font-medium">All birds are equal</h3>
+            <p className="text-foreground/80 leading-relaxed">
+              No bird can be promoted, boosted, or prioritized by money.
+              Every bird deserves the same chance to be seen, cared for, and supported.
+            </p>
+          </div>
+        </Card>
+
         <Card className="p-6 space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Bird money is sacred</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              100% of what you give to a bird goes directly to their care.
+              Wihngo never takes a cut from bird support.
+            </p>
+          </div>
+
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Care over growth</h3>
             <p className="text-muted-foreground leading-relaxed">
@@ -51,14 +70,7 @@ export function OurPrinciples({ onBack }: OurPrinciplesProps) {
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Sustainability enables care</h3>
             <p className="text-muted-foreground leading-relaxed">
-              Platform fees are honest and minimal. We need to keep running to keep serving birds.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Birds come first</h3>
-            <p className="text-muted-foreground leading-relaxed">
-              Money stays quiet in the background. This is about connection and care.
+              Optional Wihngo support helps us keep running. It&apos;s honest, minimal, and always on top—never taken from bird money.
             </p>
           </div>
         </Card>

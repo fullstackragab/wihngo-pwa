@@ -2,42 +2,66 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bird, User, Plus, Home, BookOpen } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { House, Search, Heart, User } from "lucide-react";
+import { motion } from "motion/react";
 
-const navItems = [
-  { href: "/", icon: Home, label: "Home" },
-  { href: "/birds", icon: Bird, label: "Birds" },
-  { href: "/upload", icon: Plus, label: "Share" },
-  { href: "/stories", icon: BookOpen, label: "Stories" },
-  { href: "/profile", icon: User, label: "Profile" },
+const tabs = [
+  { id: "home", label: "Home", icon: House, path: "/" },
+  { id: "explore", label: "Explore", icon: Search, path: "/birds" },
+  { id: "support", label: "Support", icon: Heart, path: "/support-wihngo" },
+  { id: "profile", label: "Profile", icon: User, path: "/profile" },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
 
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border pb-safe z-50">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
-        {navItems.map(({ href, icon: Icon, label }) => {
-          const isActive = pathname === href ||
-            (href !== "/" && pathname.startsWith(href));
+  const getActiveTab = () => {
+    if (pathname === "/") return "home";
+    if (pathname.startsWith("/birds") || pathname.startsWith("/bird/")) return "explore";
+    if (pathname.startsWith("/support-wihngo") || pathname.startsWith("/donation")) return "support";
+    if (pathname.startsWith("/profile")) return "profile";
+    return "home";
+  };
 
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex flex-col items-center justify-center w-full h-full",
-                "transition-colors duration-200",
-                isActive ? "text-primary" : "text-muted-foreground"
-              )}
-            >
-              <Icon className={cn("w-6 h-6", isActive && "stroke-[2.5]")} />
-              <span className="text-xs mt-1 font-medium">{label}</span>
-            </Link>
-          );
-        })}
+  const activeTab = getActiveTab();
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-t border-border/50 safe-area-inset-bottom">
+      <div className="max-w-2xl mx-auto px-4 py-2">
+        <div className="flex items-center justify-around">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <Link
+                key={tab.id}
+                href={tab.path}
+                className="flex flex-col items-center gap-1 py-2 px-4 relative"
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="active-tab"
+                    className="absolute inset-0 bg-primary/10 rounded-xl"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+                <Icon
+                  className={`w-5 h-5 relative z-10 transition-colors ${
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  }`}
+                  strokeWidth={isActive ? 2 : 1.5}
+                />
+                <span
+                  className={`text-xs relative z-10 transition-colors ${
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  {tab.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );

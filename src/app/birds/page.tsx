@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { getBirds, searchBirds } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
 import { BirdCard } from "@/components/bird-card";
 import { BottomNav } from "@/components/bottom-nav";
 import { LoadingSpinner } from "@/components/ui/loading";
-import { Search, Bird } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search, ArrowLeft, Bird } from "lucide-react";
 
 export default function BirdsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -42,33 +44,36 @@ export default function BirdsPage() {
   const loading = isLoading || searchLoading;
 
   return (
-    <div className="min-h-screen-safe pb-20">
-      {/* Header - Figma BirdGalleryScreen style */}
-      <header className="px-6 py-8 pt-safe">
-        <div className="max-w-md mx-auto space-y-6">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-medium">Birds to Support</h1>
-            <p className="text-muted-foreground leading-relaxed">
-              Choose a bird to learn their story and offer your support
-            </p>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
+        <div className="max-w-2xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-3 mb-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push("/")}
+              className="rounded-full"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <h2>Explore Birds</h2>
           </div>
-
-          {/* Search */}
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
               type="text"
               placeholder="Search birds..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 h-14 rounded-2xl border border-border bg-input-background focus:bg-card focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary transition-all"
+              className="pl-10 rounded-full bg-input-background border-border/50"
             />
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Content */}
-      <main className="max-w-md mx-auto px-6">
+      {/* Bird Grid */}
+      <div className="max-w-2xl mx-auto px-4 py-6">
         {loading ? (
           <div className="flex justify-center py-12">
             <LoadingSpinner size="lg" />
@@ -90,29 +95,29 @@ export default function BirdsPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-6">
             {birds.map((bird) => (
-              <BirdCard key={bird.birdId} bird={bird} variant="gallery" />
+              <BirdCard key={bird.birdId} bird={bird} variant="feed" />
             ))}
           </div>
         )}
 
         {/* Load More */}
         {data?.items && data.items.length > 0 && data.totalCount > page * 20 && !searchQuery && (
-          <button
-            onClick={() => setPage((p) => p + 1)}
-            className="w-full mt-6 py-3 text-primary font-medium"
-          >
-            Load more
-          </button>
+          <div className="text-center mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => p + 1)}
+              className="rounded-full"
+            >
+              Load more
+            </Button>
+          </div>
         )}
+      </div>
 
-        {/* Footer Note */}
-        <p className="text-xs text-center text-muted-foreground py-8">
-          More birds are added regularly as we expand our care network
-        </p>
-      </main>
-
+      {/* Bottom Nav spacer */}
+      <div className="h-20" />
       <BottomNav />
     </div>
   );

@@ -3,67 +3,67 @@
 :root {
   --font-size: 16px;
 
-  /* Figma Design System Colors - Warm Earthy Palette */
-  --background: #fdfcf9;
-  --foreground: #3d3931;
+  /* Figma Design System Colors - Nature Green Palette */
+  --background: #faf9f7;
+  --foreground: #4a4438;
 
   /* Brand Colors */
-  --primary: #8b6f47;
+  --primary: #7a9b76;
   --primary-foreground: #ffffff;
-  --secondary: #f4ede3;
-  --secondary-foreground: #3d3931;
-  --accent: #e8dcc8;
-  --accent-foreground: #3d3931;
+  --secondary: #e8dcc8;
+  --secondary-foreground: #4a4438;
+  --accent: #c4dbc0;
+  --accent-foreground: #4a4438;
 
   /* Neutral Colors */
-  --muted: #f4ede3;
-  --muted-foreground: #7a6f5f;
+  --muted: #f5f0e8;
+  --muted-foreground: #8b8373;
   --card: #ffffff;
-  --card-foreground: #3d3931;
+  --card-foreground: #4a4438;
   --popover: #ffffff;
-  --popover-foreground: #3d3931;
-  --border: rgba(139, 111, 71, 0.15);
+  --popover-foreground: #4a4438;
+  --border: rgba(122, 155, 118, 0.15);
   --input: transparent;
-  --input-background: #f9f5ef;
-  --switch-background: #d4c7b3;
+  --input-background: #ffffff;
+  --switch-background: #cbced4;
 
   /* Semantic Colors */
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
-  --success: #7FB77E;
+  --success: #7a9b76;
   --warning: #F6E6A8;
   --error: #d4183d;
 
   /* Special Colors */
   --heart-red: #d4183d;
-  --support-green: #7FB77E;
+  --support-green: #7a9b76;
 
   /* Ring/Focus */
-  --ring: #8b6f47;
+  --ring: #7a9b76;
 
   /* Font weights */
   --font-weight-medium: 500;
   --font-weight-normal: 400;
 
   /* Chart Colors */
-  --chart-1: #8b6f47;
-  --chart-2: #b89968;
-  --chart-3: #d4c7b3;
+  --chart-1: #7a9b76;
+  --chart-2: #9bb897;
+  --chart-3: #c4dbc0;
   --chart-4: #e8dcc8;
-  --chart-5: #f4ede3;
+  --chart-5: #f5f0e8;
 
   /* Radius */
-  --radius: 0.75rem;
+  --radius: 1rem;
 
   /* Sidebar */
-  --sidebar: #fdfcf9;
-  --sidebar-foreground: #3d3931;
-  --sidebar-primary: #8b6f47;
+  --sidebar: #faf9f7;
+  --sidebar-foreground: #4a4438;
+  --sidebar-primary: #7a9b76;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f4ede3;
-  --sidebar-accent-foreground: #3d3931;
-  --sidebar-border: rgba(139, 111, 71, 0.15);
-  --sidebar-ring: #8b6f47;
+  --sidebar-accent: #f5f0e8;
+  --sidebar-accent-foreground: #4a4438;
+  --sidebar-border: rgba(122, 155, 118, 0.15);
+  --sidebar-ring: #7a9b76;
 }
 
 @theme inline {
@@ -187,6 +187,11 @@
 
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Safe area inset for bottom nav */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Hide scrollbar but allow scroll */
