@@ -19,6 +19,8 @@ import {
   HandHeart,
   Feather,
   Scale,
+  Lightbulb,
+  Library,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -184,6 +186,33 @@ export default function ProfilePage() {
           className="space-y-3"
         >
           <h3 className="text-sm font-medium text-muted-foreground px-1">
+            Explore
+          </h3>
+          <Link href="/knowledge">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Library className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">Knowledge Hub</h4>
+                <p className="text-sm text-muted-foreground">
+                  Guides, species, and bird care wisdom
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/initiatives">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Lightbulb className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">Initiatives</h4>
+                <p className="text-sm text-muted-foreground">
+                  Real solutions for better bird life
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <h3 className="text-sm font-medium text-muted-foreground px-1 pt-3">
             Learn More
           </h3>
           <Link href="/about">
