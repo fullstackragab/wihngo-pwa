@@ -3,55 +3,56 @@
 import { TopBar } from "./top-bar";
 import { Card } from "./ui/card";
 
-interface HowFeesWorkProps {
+interface HowPaymentsWorkProps {
   onBack: () => void;
 }
 
-export function HowFeesWork({ onBack }: HowFeesWorkProps) {
+export function HowPaymentsWork({ onBack }: HowPaymentsWorkProps) {
   return (
     <div className="min-h-screen bg-background pb-20">
-      <TopBar title="How Fees Work" onBack={onBack} />
+      <TopBar title="How Payments Work" onBack={onBack} />
 
       <div className="max-w-lg mx-auto p-4 space-y-4">
         <div className="space-y-2">
           <p className="text-lg text-muted-foreground leading-relaxed">
-            We believe in being completely transparent about costs.
+            Bird money is sacred. We never take a cut.
           </p>
         </div>
 
         <Card className="p-6 space-y-4">
           <div className="space-y-2">
-            <h3 className="text-foreground font-medium">When you support a bird</h3>
+            <h3 className="text-foreground font-medium">100% goes to the bird</h3>
             <p className="text-muted-foreground leading-relaxed">
-              100% of your chosen amount goes directly to the bird&apos;s owner. If you send $1, they receive $1.
+              When you support a bird, every cent goes directly to their owner.
+              Send $1, they receive $1. Send $100, they receive $100.
             </p>
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Optional platform support</h3>
+            <h3 className="text-foreground font-medium">Wihngo support is optional</h3>
             <p className="text-muted-foreground leading-relaxed">
-              You can choose to add 5¢ to help keep Wihngo running. This covers:
+              You can choose to add a small amount (starting at 5 cents) to help keep Wihngo running. This is:
             </p>
             <ul className="space-y-1 ml-4 text-muted-foreground">
-              <li>• Cloud storage for photos and videos</li>
-              <li>• Server hosting and maintenance</li>
-              <li>• Platform development and improvements</li>
+              <li>Completely optional</li>
+              <li>Added on top of your bird support</li>
+              <li>Never taken from bird money</li>
             </ul>
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Transaction fees</h3>
+            <h3 className="text-foreground font-medium">Tiny network costs</h3>
             <p className="text-muted-foreground leading-relaxed">
-              We use USDC on Solana for near-zero transaction fees—typically less than a penny.
+              We use USDC on Solana for near-zero transaction costs - typically less than a penny.
               This means more of your support reaches the birds.
             </p>
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Why digital dollars?</h3>
+            <h3 className="text-foreground font-medium">Why USDC?</h3>
             <p className="text-muted-foreground leading-relaxed">
-              USDC is a stable digital currency equal to $1 USD. It enables fast, affordable payments
-              without the complexity or volatility of traditional cryptocurrencies.
+              USDC is a stable digital dollar equal to $1 USD. It enables fast, affordable payments
+              without the volatility of traditional cryptocurrencies.
             </p>
           </div>
         </Card>
@@ -61,24 +62,24 @@ export function HowFeesWork({ onBack }: HowFeesWorkProps) {
             <h4 className="text-foreground font-medium">Example</h4>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Support amount:</span>
-                <span className="text-foreground">$1.00</span>
+                <span className="text-muted-foreground">To the bird:</span>
+                <span className="text-foreground">$3.00</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Platform support (optional):</span>
+                <span className="text-muted-foreground">To Wihngo (optional):</span>
                 <span className="text-foreground">$0.05</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Network fee:</span>
+                <span className="text-muted-foreground">Network cost:</span>
                 <span className="text-foreground">~$0.001</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-primary/20">
                 <span className="font-medium text-foreground">Total you pay:</span>
-                <span className="font-medium text-primary">$1.05</span>
+                <span className="font-medium text-primary">$3.05</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium text-foreground">Bird receives:</span>
-                <span className="font-medium text-primary">$1.00</span>
+                <span className="font-medium text-primary">$3.00</span>
               </div>
             </div>
           </div>
@@ -86,8 +87,8 @@ export function HowFeesWork({ onBack }: HowFeesWorkProps) {
 
         <Card className="p-6 bg-accent/30 border-accent">
           <p className="text-sm text-foreground leading-relaxed">
-            We never take a percentage of support sent to birds. The optional 5¢ is a flat fee—
-            whether you send $1 or $100, it&apos;s always just 5¢.
+            <strong>Bird money is sacred.</strong> We never take a percentage. The optional Wihngo support is a flat amount -
+            whether you send $1 or $100, bird money stays untouched.
           </p>
         </Card>
       </div>

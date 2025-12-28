@@ -4,23 +4,52 @@ import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getBird } from "@/services/bird.service";
-import { createPaymentIntent, submitPayment } from "@/services/payment.service";
+import { createPaymentIntent, confirmPayment, checkWalletBalance } from "@/services/payment.service";
+import {
+  MINIMUM_SOL_FOR_GAS,
+  TransactionConfirmation,
+  PaymentIntentResponse,
+} from "@/types/payment";
 import { useAuth } from "@/contexts/auth-context";
 import { usePhantom } from "@/hooks/use-phantom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
-import { ArrowLeft, Wallet, CheckCircle2, XCircle, Heart, ExternalLink, AlertCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Wallet,
+  CheckCircle2,
+  XCircle,
+  Heart,
+  ExternalLink,
+  AlertCircle,
+} from "lucide-react";
 import Image from "next/image";
 import { ApiError } from "@/services/api-helper";
+import {
+  Connection,
+  PublicKey,
+  Transaction,
+  clusterApiUrl,
+} from "@solana/web3.js";
+import {
+  createTransferInstruction,
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+  getAccount,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 
 type PaymentStep =
   | "connect_wallet"
   | "checking_balance"
   | "insufficient_funds"
   | "ready"
-  | "signing"
-  | "submitting"
+  | "creating_intent"
+  | "signing_bird"
+  | "signing_wihngo"
+  | "confirming"
   | "success"
   | "error";
 
@@ -29,13 +58,15 @@ interface ValidationError {
   message: string;
 }
 
-const MINIMUM_SOL_FOR_GAS = 0.005; // ~0.005 SOL needed for transaction fees
-
 function parseApiError(err: unknown): string {
   if (err instanceof ApiError) {
-    const data = err.data as { message?: string; errors?: ValidationError[]; error?: string };
+    const data = err.data as {
+      message?: string;
+      errors?: ValidationError[];
+      error?: string;
+    };
     if (data?.errors && Array.isArray(data.errors)) {
-      return data.errors.map(e => e.message).join(". ");
+      return data.errors.map((e) => e.message).join(". ");
     }
     if (data?.message) return data.message;
     if (data?.error) return data.error;
@@ -45,26 +76,34 @@ function parseApiError(err: unknown): string {
   return "An unexpected error occurred";
 }
 
+// USDC has 6 decimals
+const USDC_DECIMALS = 6;
+
 function PaymentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const birdId = searchParams.get("birdId");
-  const amountStr = searchParams.get("amount");
-  const amount = parseFloat(amountStr || "0");
+  const birdAmountStr = searchParams.get("birdAmount");
+  const wihngoAmountStr = searchParams.get("wihngoAmount");
+  const birdAmount = parseFloat(birdAmountStr || "0");
+  const wihngoAmount = parseFloat(wihngoAmountStr || "0");
+  const totalAmount = birdAmount + wihngoAmount;
 
   const { isAuthenticated } = useAuth();
   const {
     isPhantomInstalled,
     isConnected,
     connect,
-    signTransaction,
-    walletAddress
+    signAndSendTransaction,
+    walletAddress,
+    publicKey,
   } = usePhantom();
 
   const [step, setStep] = useState<PaymentStep>("connect_wallet");
   const [error, setError] = useState<string>("");
-  const [paymentId, setPaymentId] = useState<string>("");
-  const [serializedTx, setSerializedTx] = useState<string>("");
+  const [paymentIntent, setPaymentIntent] = useState<PaymentIntentResponse | null>(null);
+  const [birdSignature, setBirdSignature] = useState<string>("");
+  const [wihngoSignature, setWihngoSignature] = useState<string>("");
   const [balanceInfo, setBalanceInfo] = useState<{
     solBalance: number;
     usdcBalance: number;
@@ -77,17 +116,18 @@ function PaymentContent() {
   });
 
   const createIntentMutation = useMutation({
-    mutationFn: () => createPaymentIntent({
-      birdId: birdId!,
-      supportAmount: amount,
-      platformSupportAmount: 0,
-      currency: "USDC",
-      walletAddress: walletAddress!,
-    }),
+    mutationFn: () =>
+      createPaymentIntent({
+        type: "BIRD_SUPPORT",
+        birdId: birdId!,
+        birdAmount,
+        wihngoAmount,
+      }),
   });
 
-  const submitMutation = useMutation({
-    mutationFn: submitPayment,
+  const confirmMutation = useMutation({
+    mutationFn: (data: { intentId: string; transactions: TransactionConfirmation[] }) =>
+      confirmPayment(data),
   });
 
   useEffect(() => {
@@ -111,12 +151,7 @@ function PaymentContent() {
     setError("");
 
     try {
-      // Call backend to check wallet balances
-      const response = await fetch(`/api/wallets/${walletAddress}/balance`);
-      if (!response.ok) {
-        throw new Error("Failed to check balance");
-      }
-      const data = await response.json();
+      const data = await checkWalletBalance(walletAddress);
 
       setBalanceInfo({
         solBalance: data.solBalance || 0,
@@ -124,7 +159,7 @@ function PaymentContent() {
       });
 
       const hasEnoughSol = data.solBalance >= MINIMUM_SOL_FOR_GAS;
-      const hasEnoughUsdc = data.usdcBalance >= amount;
+      const hasEnoughUsdc = data.usdcBalance >= totalAmount;
 
       if (!hasEnoughSol || !hasEnoughUsdc) {
         setStep("insufficient_funds");
@@ -133,7 +168,7 @@ function PaymentContent() {
       }
     } catch (err) {
       console.error("Balance check error:", err);
-      // If balance check fails, still allow proceeding - backend will validate
+      // If balance check fails, still allow proceeding - will validate on-chain
       setStep("ready");
     }
   };
@@ -149,39 +184,127 @@ function PaymentContent() {
     }
   };
 
+  const buildUsdcTransferTransaction = async (
+    connection: Connection,
+    fromPubkey: PublicKey,
+    toPubkey: PublicKey,
+    usdcMint: PublicKey,
+    amountUsdc: number
+  ): Promise<Transaction> => {
+    const fromAta = await getAssociatedTokenAddress(usdcMint, fromPubkey);
+    const toAta = await getAssociatedTokenAddress(usdcMint, toPubkey);
+
+    const transaction = new Transaction();
+
+    // Check if destination ATA exists, create if needed
+    try {
+      await getAccount(connection, toAta);
+    } catch {
+      // ATA doesn't exist, add instruction to create it
+      transaction.add(
+        createAssociatedTokenAccountInstruction(
+          fromPubkey, // payer
+          toAta, // ata
+          toPubkey, // owner
+          usdcMint, // mint
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      );
+    }
+
+    // Convert amount to USDC units (6 decimals)
+    const amountUnits = Math.round(amountUsdc * Math.pow(10, USDC_DECIMALS));
+
+    // Add transfer instruction
+    transaction.add(
+      createTransferInstruction(
+        fromAta, // source
+        toAta, // destination
+        fromPubkey, // owner
+        amountUnits // amount
+      )
+    );
+
+    // Get recent blockhash
+    const { blockhash } = await connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = fromPubkey;
+
+    return transaction;
+  };
+
   const handleProceedToPayment = async () => {
+    if (!publicKey || !walletAddress) {
+      setError("Wallet not connected");
+      return;
+    }
+
     try {
       setError("");
-      setStep("signing");
+      setStep("creating_intent");
 
-      // Create payment intent with wallet address
+      // Create payment intent
       const intent = await createIntentMutation.mutateAsync();
-      setPaymentId(intent.paymentId);
+      setPaymentIntent(intent);
 
-      if (!intent.serializedTransaction) {
-        throw new Error("No transaction to sign");
+      // Connect to Solana
+      const connection = new Connection(
+        process.env.NEXT_PUBLIC_SOLANA_RPC_URL || clusterApiUrl("mainnet-beta"),
+        "confirmed"
+      );
+
+      const usdcMint = new PublicKey(intent.usdcMint);
+      const transactions: TransactionConfirmation[] = [];
+
+      // Send bird transfer if there's a bird amount
+      if (birdAmount > 0 && intent.birdWallet) {
+        setStep("signing_bird");
+
+        const birdWalletPubkey = new PublicKey(intent.birdWallet);
+        const birdTx = await buildUsdcTransferTransaction(
+          connection,
+          publicKey,
+          birdWalletPubkey,
+          usdcMint,
+          birdAmount
+        );
+
+        const birdSig = await signAndSendTransaction(birdTx);
+        setBirdSignature(birdSig);
+        transactions.push({ type: "BIRD", signature: birdSig });
       }
 
-      setSerializedTx(intent.serializedTransaction);
+      // Send wihngo transfer if there's a wihngo amount
+      if (wihngoAmount > 0) {
+        setStep("signing_wihngo");
 
-      // Sign the transaction
-      const signedTx = await signTransaction(intent.serializedTransaction);
+        const wihngoWalletPubkey = new PublicKey(intent.wihngoWallet);
+        const wihngoTx = await buildUsdcTransferTransaction(
+          connection,
+          publicKey,
+          wihngoWalletPubkey,
+          usdcMint,
+          wihngoAmount
+        );
 
-      setStep("submitting");
+        const wihngoSig = await signAndSendTransaction(wihngoTx);
+        setWihngoSignature(wihngoSig);
+        transactions.push({ type: "WIHNGO", signature: wihngoSig });
+      }
 
-      // Submit signed transaction
-      const result = await submitMutation.mutateAsync({
-        paymentId: intent.paymentId,
-        signedTransaction: signedTx,
+      // Confirm with backend
+      setStep("confirming");
+      const result = await confirmMutation.mutateAsync({
+        intentId: intent.intentId,
+        transactions,
       });
 
-      if (result.status === "Completed" || result.status === "Confirmed" || result.solanaSignature) {
+      if (result.success) {
         setStep("success");
-      } else if (result.errorMessage) {
-        setError(result.errorMessage);
-        setStep("error");
       } else {
-        setStep("success");
+        setError(result.message || "Payment confirmation failed");
+        setStep("error");
       }
     } catch (err) {
       console.error("Payment error:", err);
@@ -190,7 +313,7 @@ function PaymentContent() {
     }
   };
 
-  if (!birdId || !amount || amount <= 0) {
+  if (!birdId || birdAmount <= 0) {
     return (
       <div className="min-h-screen-safe flex items-center justify-center">
         <div className="text-center">
@@ -210,7 +333,9 @@ function PaymentContent() {
               <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-purple-100 flex items-center justify-center">
                 <Wallet className="w-10 h-10 text-purple-600" />
               </div>
-              <h2 className="text-xl font-bold text-foreground mb-2">Connect Your Wallet</h2>
+              <h2 className="text-xl font-bold text-foreground mb-2">
+                Connect Your Wallet
+              </h2>
               <p className="text-muted-foreground">
                 Connect your Phantom wallet to support {bird?.name}
               </p>
@@ -221,7 +346,9 @@ function PaymentContent() {
                 <div className="flex gap-3">
                   <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
                   <div>
-                    <p className="text-sm text-amber-800 font-medium">Phantom Wallet Required</p>
+                    <p className="text-sm text-amber-800 font-medium">
+                      Phantom Wallet Required
+                    </p>
                     <p className="text-sm text-amber-700 mt-1">
                       Install Phantom to pay with USDC on Solana.
                     </p>
@@ -249,7 +376,9 @@ function PaymentContent() {
               Connect Phantom Wallet
             </Button>
 
-            {error && <p className="mt-4 text-sm text-destructive text-center">{error}</p>}
+            {error && (
+              <p className="mt-4 text-sm text-destructive text-center">{error}</p>
+            )}
           </>
         );
 
@@ -257,8 +386,12 @@ function PaymentContent() {
         return (
           <div className="text-center py-12">
             <LoadingSpinner className="mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-foreground mb-2">Checking Balance</h2>
-            <p className="text-muted-foreground">Verifying your wallet has enough USDC...</p>
+            <h2 className="text-lg font-semibold text-foreground mb-2">
+              Checking Balance
+            </h2>
+            <p className="text-muted-foreground">
+              Verifying your wallet has enough USDC...
+            </p>
           </div>
         );
 
@@ -268,25 +401,41 @@ function PaymentContent() {
             <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">
               <AlertCircle className="w-10 h-10 text-amber-600" />
             </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">Insufficient Balance</h2>
+            <h2 className="text-xl font-bold text-foreground mb-2">
+              Insufficient Balance
+            </h2>
 
             <Card variant="outlined" className="text-left mb-6 mt-4">
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">USDC Balance</span>
-                  <span className={`font-medium ${(balanceInfo?.usdcBalance || 0) < amount ? 'text-destructive' : 'text-foreground'}`}>
-                    ${balanceInfo?.usdcBalance?.toFixed(2) || '0.00'}
+                  <span
+                    className={`font-medium ${
+                      (balanceInfo?.usdcBalance || 0) < totalAmount
+                        ? "text-destructive"
+                        : "text-foreground"
+                    }`}
+                  >
+                    ${balanceInfo?.usdcBalance?.toFixed(2) || "0.00"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Required</span>
-                  <span className="font-medium text-foreground">${amount.toFixed(2)}</span>
+                  <span className="font-medium text-foreground">
+                    ${totalAmount.toFixed(2)}
+                  </span>
                 </div>
                 <div className="border-t border-border pt-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">SOL (for gas)</span>
-                    <span className={`font-medium ${(balanceInfo?.solBalance || 0) < MINIMUM_SOL_FOR_GAS ? 'text-destructive' : 'text-foreground'}`}>
-                      {balanceInfo?.solBalance?.toFixed(4) || '0'} SOL
+                    <span
+                      className={`font-medium ${
+                        (balanceInfo?.solBalance || 0) < MINIMUM_SOL_FOR_GAS
+                          ? "text-destructive"
+                          : "text-foreground"
+                      }`}
+                    >
+                      {balanceInfo?.solBalance?.toFixed(4) || "0"} SOL
                     </span>
                   </div>
                 </div>
@@ -294,14 +443,15 @@ function PaymentContent() {
             </Card>
 
             <p className="text-sm text-muted-foreground mb-6">
-              You need at least ${amount.toFixed(2)} USDC and ~0.005 SOL for transaction fees.
+              You need at least ${totalAmount.toFixed(2)} USDC and ~0.005 SOL for
+              transaction fees.
             </p>
 
             <div className="space-y-3">
               <Button
                 fullWidth
                 variant="outline"
-                onClick={() => window.open('https://jup.ag/', '_blank')}
+                onClick={() => window.open("https://jup.ag/", "_blank")}
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Get USDC on Jupiter
@@ -321,9 +471,11 @@ function PaymentContent() {
         return (
           <>
             <div className="text-center mb-6">
-              <h2 className="text-xl font-bold text-foreground mb-2">Confirm Support</h2>
+              <h2 className="text-xl font-bold text-foreground mb-2">
+                Confirm Support
+              </h2>
               <p className="text-muted-foreground">
-                You're about to support {bird?.name} with ${amount.toFixed(2)} USDC
+                Review your support for {bird?.name}
               </p>
             </div>
 
@@ -352,14 +504,26 @@ function PaymentContent() {
             )}
 
             <Card variant="outlined" className="mb-6">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Support Amount</span>
-                  <span className="font-medium">${amount.toFixed(2)} USDC</span>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">To {bird?.name}</span>
+                  <span className="font-medium">${birdAmount.toFixed(2)} USDC</span>
                 </div>
-                <div className="flex justify-between">
+                {wihngoAmount > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">To Wihngo (optional)</span>
+                    <span className="font-medium">${wihngoAmount.toFixed(2)} USDC</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-3 border-t border-border">
+                  <span className="font-medium">Total</span>
+                  <span className="font-medium text-primary">
+                    ${totalAmount.toFixed(2)} USDC
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Network Fee</span>
-                  <span className="font-medium text-green-600">Minimal (~$0.001)</span>
+                  <span className="text-green-600">Minimal (~$0.001)</span>
                 </div>
               </div>
             </Card>
@@ -371,30 +535,64 @@ function PaymentContent() {
               className="bg-primary hover:bg-primary/90"
             >
               <Heart className="w-5 h-5 mr-2" />
-              Sign & Send ${amount.toFixed(2)}
+              Sign & Send ${totalAmount.toFixed(2)}
             </Button>
 
-            {error && <p className="mt-4 text-sm text-destructive text-center">{error}</p>}
+            {error && (
+              <p className="mt-4 text-sm text-destructive text-center">{error}</p>
+            )}
           </>
         );
 
-      case "signing":
+      case "creating_intent":
         return (
           <div className="text-center py-12">
             <LoadingSpinner className="mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-foreground mb-2">Approve in Wallet</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-2">
+              Preparing Payment
+            </h2>
+            <p className="text-muted-foreground">Setting up your transactions...</p>
+          </div>
+        );
+
+      case "signing_bird":
+        return (
+          <div className="text-center py-12">
+            <LoadingSpinner className="mx-auto mb-4" />
+            <h2 className="text-lg font-semibold text-foreground mb-2">
+              Approve Transfer to {bird?.name}
+            </h2>
             <p className="text-muted-foreground">
-              Please approve the transaction in your Phantom wallet
+              Please approve the ${birdAmount.toFixed(2)} USDC transfer in your Phantom
+              wallet
             </p>
           </div>
         );
 
-      case "submitting":
+      case "signing_wihngo":
         return (
           <div className="text-center py-12">
             <LoadingSpinner className="mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-foreground mb-2">Processing</h2>
-            <p className="text-muted-foreground">Submitting your support to the blockchain...</p>
+            <h2 className="text-lg font-semibold text-foreground mb-2">
+              Approve Wihngo Support
+            </h2>
+            <p className="text-muted-foreground">
+              Please approve the ${wihngoAmount.toFixed(2)} USDC transfer in your Phantom
+              wallet
+            </p>
+          </div>
+        );
+
+      case "confirming":
+        return (
+          <div className="text-center py-12">
+            <LoadingSpinner className="mx-auto mb-4" />
+            <h2 className="text-lg font-semibold text-foreground mb-2">
+              Confirming Payment
+            </h2>
+            <p className="text-muted-foreground">
+              Verifying your transactions on the blockchain...
+            </p>
           </div>
         );
 
@@ -405,9 +603,30 @@ function PaymentContent() {
               <CheckCircle2 className="w-10 h-10 text-green-600" />
             </div>
             <h2 className="text-xl font-bold text-foreground mb-2">Thank You!</h2>
-            <p className="text-muted-foreground mb-6">
-              Your support of ${amount.toFixed(2)} for {bird?.name} was successful!
+            <p className="text-muted-foreground mb-2">
+              Your support for {bird?.name} was successful!
             </p>
+
+            <Card variant="outlined" className="text-left mb-6 mt-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">To {bird?.name}</span>
+                  <span className="font-medium">${birdAmount.toFixed(2)}</span>
+                </div>
+                {wihngoAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">To Wihngo</span>
+                    <span className="font-medium">${wihngoAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-2 border-t border-border">
+                  <span className="font-medium">Total</span>
+                  <span className="font-medium text-primary">
+                    ${totalAmount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </Card>
 
             <div className="space-y-3">
               <Button fullWidth onClick={() => router.push(`/bird/${birdId}`)}>
@@ -434,8 +653,14 @@ function PaymentContent() {
             </p>
 
             <div className="space-y-3">
-              <Button fullWidth onClick={() => setStep("ready")}>Try Again</Button>
-              <Button variant="outline" fullWidth onClick={() => router.push(`/bird/${birdId}`)}>
+              <Button fullWidth onClick={() => setStep("ready")}>
+                Try Again
+              </Button>
+              <Button
+                variant="outline"
+                fullWidth
+                onClick={() => router.push(`/bird/${birdId}`)}
+              >
                 Cancel
               </Button>
             </div>
@@ -451,7 +676,12 @@ function PaymentContent() {
           <button
             onClick={() => router.back()}
             className="p-2 -ml-2"
-            disabled={step === "signing" || step === "submitting"}
+            disabled={
+              step === "signing_bird" ||
+              step === "signing_wihngo" ||
+              step === "confirming" ||
+              step === "creating_intent"
+            }
           >
             <ArrowLeft className="w-6 h-6 text-muted-foreground" />
           </button>
@@ -464,9 +694,16 @@ function PaymentContent() {
           <Card variant="outlined" className="flex items-center gap-4 mb-8">
             <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-muted flex-shrink-0">
               {bird.imageUrl ? (
-                <Image src={bird.imageUrl} alt={bird.name || "Bird"} fill className="object-cover" />
+                <Image
+                  src={bird.imageUrl}
+                  alt={bird.name || "Bird"}
+                  fill
+                  className="object-cover"
+                />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-xl">🐦</div>
+                <div className="w-full h-full flex items-center justify-center text-xl">
+                  🐦
+                </div>
               )}
             </div>
             <div className="flex-1">
@@ -474,7 +711,7 @@ function PaymentContent() {
               <p className="text-sm text-muted-foreground">{bird.species}</p>
             </div>
             <div className="text-right">
-              <p className="font-bold text-primary">${amount.toFixed(2)}</p>
+              <p className="font-bold text-primary">${totalAmount.toFixed(2)}</p>
               <p className="text-xs text-muted-foreground">USDC</p>
             </div>
           </Card>

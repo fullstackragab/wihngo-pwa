@@ -177,6 +177,23 @@ export function usePhantom() {
     [provider, isConnected]
   );
 
+  const signAndSendTransaction = useCallback(
+    async (transaction: Transaction): Promise<string> => {
+      if (!provider || !isConnected) {
+        throw new Error("Wallet not connected");
+      }
+
+      try {
+        const result = await provider.signAndSendTransaction(transaction);
+        return result.signature;
+      } catch (error) {
+        console.error("Failed to sign and send transaction:", error);
+        throw error;
+      }
+    },
+    [provider, isConnected]
+  );
+
   return {
     provider,
     publicKey,
@@ -185,6 +202,7 @@ export function usePhantom() {
     connect,
     disconnect,
     signTransaction,
+    signAndSendTransaction,
     signMessage,
     walletAddress: publicKey?.toBase58() || null,
   };

@@ -6,12 +6,18 @@ import { useQuery } from "@tanstack/react-query";
 import { getBird } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { LoadingScreen } from "@/components/ui/loading";
-import { Check } from "lucide-react";
+import { Check, Info } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-
-const PRESET_AMOUNTS = [1, 3, 5];
+import {
+  PRESET_BIRD_AMOUNTS,
+  DEFAULT_WIHNGO_SUPPORT,
+  MIN_WIHNGO_SUPPORT,
+  MIN_BIRD_AMOUNT,
+  MAX_BIRD_AMOUNT,
+} from "@/types/payment";
 
 function DonationContent() {
   const router = useRouter();
@@ -21,6 +27,8 @@ function DonationContent() {
 
   const [selectedAmount, setSelectedAmount] = useState<number | null>(1);
   const [customAmount, setCustomAmount] = useState<string>("");
+  const [supportWihngo, setSupportWihngo] = useState(true);
+  const [wihngoAmount, setWihngoAmount] = useState<string>(DEFAULT_WIHNGO_SUPPORT.toString());
 
   const { data: bird, isLoading } = useQuery({
     queryKey: ["bird", birdId],
@@ -65,18 +73,25 @@ function DonationContent() {
     setSelectedAmount(null);
   };
 
-  const currentAmount = selectedAmount || parseFloat(customAmount) || 0;
-  const isValidAmount = currentAmount >= 0.01 && currentAmount <= 1000;
+  const birdAmount = selectedAmount || parseFloat(customAmount) || 0;
+  const currentWihngoAmount = supportWihngo ? (parseFloat(wihngoAmount) || 0) : 0;
+  const totalAmount = birdAmount + currentWihngoAmount;
+
+  const isValidBirdAmount = birdAmount >= MIN_BIRD_AMOUNT && birdAmount <= MAX_BIRD_AMOUNT;
+  const isValidWihngoAmount = !supportWihngo || currentWihngoAmount >= MIN_WIHNGO_SUPPORT;
+  const isValidAmount = isValidBirdAmount && isValidWihngoAmount;
 
   const handleContinue = () => {
     if (!isValidAmount) return;
-    router.push(`/donation/pay?birdId=${birdId}&amount=${currentAmount}`);
+    router.push(
+      `/donation/pay?birdId=${birdId}&birdAmount=${birdAmount}&wihngoAmount=${currentWihngoAmount}`
+    );
   };
 
   return (
     <div className="min-h-screen-safe flex flex-col px-6 py-8">
       <div className="max-w-md w-full mx-auto space-y-8">
-        {/* Header - Figma SendSupportScreen style */}
+        {/* Header */}
         <div className="space-y-2">
           <button
             onClick={() => router.back()}
@@ -84,10 +99,13 @@ function DonationContent() {
           >
             ← Back
           </button>
-          <h1 className="text-3xl pt-2 font-medium">You're helping a bird 💛</h1>
+          <h1 className="text-3xl pt-2 font-medium">Support {bird?.name}</h1>
+          <p className="text-muted-foreground">
+            100% of your bird support goes directly to their care
+          </p>
         </div>
 
-        {/* Bird Card - Figma style */}
+        {/* Bird Card */}
         {bird && (
           <div className="bg-card rounded-3xl overflow-hidden shadow-sm border border-border">
             <div className="aspect-[4/3] overflow-hidden bg-muted">
@@ -114,13 +132,13 @@ function DonationContent() {
           </div>
         )}
 
-        {/* Amount Selector - Figma style */}
+        {/* Bird Amount Selector */}
         <div className="space-y-4">
-          <label className="block font-medium">Select amount</label>
+          <label className="block font-medium">How much for {bird?.name}?</label>
 
           {/* Preset Pills */}
           <div className="flex gap-3">
-            {PRESET_AMOUNTS.map((amount) => (
+            {PRESET_BIRD_AMOUNTS.map((amount) => (
               <button
                 key={amount}
                 onClick={() => handleAmountSelect(amount)}
@@ -153,54 +171,99 @@ function DonationContent() {
                 onChange={(e) => handleCustomAmountChange(e.target.value)}
                 placeholder="0.00"
                 className="w-full pl-8 pr-4 h-14 rounded-2xl bg-input-background border border-border focus:bg-card focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary transition-all"
-                min="0.01"
-                max="1000"
+                min={MIN_BIRD_AMOUNT}
+                max={MAX_BIRD_AMOUNT}
                 step="0.01"
               />
             </div>
-            {!isValidAmount && customAmount && (
-              <p className="text-sm text-destructive">Amount must be between $0.01 and $1,000</p>
+            {!isValidBirdAmount && customAmount && (
+              <p className="text-sm text-destructive">
+                Amount must be between ${MIN_BIRD_AMOUNT} and ${MAX_BIRD_AMOUNT.toLocaleString()}
+              </p>
             )}
           </div>
         </div>
 
-        {/* Fee Info - Figma accent box style */}
-        <div className="bg-accent/30 rounded-2xl p-4 border border-accent">
+        {/* Wihngo Support Toggle */}
+        <div className="bg-card rounded-2xl p-5 border border-border space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 space-y-1">
+              <p className="font-medium text-foreground">Support Wihngo too?</p>
+              <p className="text-sm text-muted-foreground">
+                Optional and added on top — bird money stays untouched
+              </p>
+            </div>
+            <Switch
+              checked={supportWihngo}
+              onCheckedChange={setSupportWihngo}
+              className="mt-1"
+            />
+          </div>
+
+          {supportWihngo && (
+            <div className="pt-4 border-t border-border">
+              <div className="flex items-center gap-3">
+                <span className="text-muted-foreground">$</span>
+                <input
+                  type="number"
+                  value={wihngoAmount}
+                  onChange={(e) => setWihngoAmount(e.target.value)}
+                  className="flex-1 h-10 px-3 rounded-xl bg-input-background border border-border focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary transition-all"
+                  min={MIN_WIHNGO_SUPPORT}
+                  step="0.01"
+                />
+              </div>
+              {!isValidWihngoAmount && (
+                <p className="text-sm text-destructive mt-2">
+                  Minimum support is ${MIN_WIHNGO_SUPPORT.toFixed(2)}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-2">
+                Helps cover hosting, storage, and platform development
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Info Box */}
+        <div className="bg-accent/30 rounded-2xl p-4 border border-accent flex gap-3">
+          <Info className="w-5 h-5 text-accent-foreground flex-shrink-0 mt-0.5" />
           <p className="text-sm text-accent-foreground">
-            <span className="font-medium">Small amounts make a big difference.</span> Network fees are minimal, and 100% of your donation goes to bird care.
+            <span className="font-medium">Bird money is sacred.</span> {bird?.name} receives exactly what you choose — Wihngo never takes a cut.
           </p>
         </div>
 
         {/* Summary Card */}
-        <div className="bg-card rounded-2xl p-5 border border-border">
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-muted-foreground">Donation</span>
-            <span className="font-medium text-foreground">${currentAmount.toFixed(2)} USDC</span>
-          </div>
-          <div className="flex justify-between items-center mb-3 pb-3 border-b border-border">
-            <span className="text-muted-foreground">Network Fee</span>
-            <span className="font-medium text-secondary">Sponsored</span>
-          </div>
+        <div className="bg-card rounded-2xl p-5 border border-border space-y-3">
           <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">To {bird?.name}</span>
+            <span className="font-medium text-foreground">${birdAmount.toFixed(2)}</span>
+          </div>
+          {supportWihngo && currentWihngoAmount > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">To Wihngo (optional)</span>
+              <span className="font-medium text-foreground">${currentWihngoAmount.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center pt-3 border-t border-border">
             <span className="font-medium text-foreground">Total</span>
-            <span className="font-medium text-xl text-primary">${currentAmount.toFixed(2)}</span>
+            <span className="font-medium text-xl text-primary">${totalAmount.toFixed(2)}</span>
           </div>
         </div>
 
-        {/* Continue Button - Figma style */}
+        {/* Continue Button */}
         <Button
           onClick={handleContinue}
-          disabled={!isValidAmount}
+          disabled={!isValidAmount || birdAmount <= 0}
           fullWidth
           size="lg"
-          variant="secondary"
         >
-          Send ${currentAmount.toFixed(2)} Support
+          Continue to Payment
         </Button>
 
         {/* Note */}
         <p className="text-xs text-center text-muted-foreground">
-          Your contribution helps create a better world for birds
+          Payments are made with USDC on Solana via Phantom Wallet
         </p>
       </div>
     </div>

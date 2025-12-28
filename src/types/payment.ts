@@ -1,3 +1,7 @@
+// Payment Intent Types - Bird-first payment model
+// Bird money is sacred: 100% goes to bird owner
+// Wihngo support is optional, transparent, and additive
+
 export type PaymentIntentStatus =
   | "Pending"
   | "AwaitingSignature"
@@ -19,31 +23,42 @@ export const TERMINAL_STATUSES: PaymentIntentStatus[] = [
 
 export const SUCCESS_STATUSES: PaymentIntentStatus[] = ["Completed", "Confirmed"];
 
-export interface PaymentPreflightRequest {
-  recipientId: string;
-  amount: number;
-}
-
-export interface PaymentPreflightResponse {
-  valid: boolean;
-  recipientName?: string;
-  recipientId?: string;
-  amount: number;
-  networkFee: number;
-  totalAmount: number;
-  gasSponsored: boolean;
-  errorMessage?: string;
-  errorCode?: string;
-}
+// Payment Intent Types
+export type PaymentIntentType = "BIRD_SUPPORT" | "WIHNGO_SUPPORT";
 
 export interface CreatePaymentIntentRequest {
-  birdId: string;
-  supportAmount: number;
-  platformSupportAmount?: number;
-  currency?: string;
-  walletAddress: string;
+  type: PaymentIntentType;
+  birdId?: string;
+  birdAmount: number;
+  wihngoAmount: number;
 }
 
+export interface PaymentIntentResponse {
+  intentId: string;
+  birdWallet: string | null;
+  wihngoWallet: string;
+  usdcMint: string;
+  expiresAt: string;
+}
+
+export interface TransactionConfirmation {
+  type: "BIRD" | "WIHNGO";
+  signature: string;
+}
+
+export interface ConfirmPaymentRequest {
+  intentId: string;
+  transactions: TransactionConfirmation[];
+}
+
+export interface ConfirmPaymentResponse {
+  success: boolean;
+  message: string;
+  birdTransactionVerified?: boolean;
+  wihngoTransactionVerified?: boolean;
+}
+
+// Wallet Balance Types
 export interface WalletBalance {
   walletAddress: string;
   solBalance: number;
@@ -59,6 +74,7 @@ export interface BalanceCheckResponse {
   minimumSolRequired: number;
 }
 
+// Legacy types for backwards compatibility
 export interface PaymentIntent {
   paymentId: string;
   status: PaymentIntentStatus;
@@ -140,9 +156,12 @@ export interface LinkedWallet {
   linkedAt: string;
 }
 
-export const QUICK_SEND_AMOUNTS = [1, 2, 5] as const;
-export type QuickSendAmount = (typeof QUICK_SEND_AMOUNTS)[number];
+// Constants - Bird-first values
+export const PRESET_BIRD_AMOUNTS = [1, 3, 5] as const;
+export type PresetBirdAmount = (typeof PRESET_BIRD_AMOUNTS)[number];
 
-export const DEFAULT_NETWORK_FEE_USD = 0.01;
-export const MIN_PAYMENT_USD = 0.01;
-export const MAX_PAYMENT_USD = 1000;
+export const DEFAULT_WIHNGO_SUPPORT = 0.05; // $0.05 - minimum suggested
+export const MIN_WIHNGO_SUPPORT = 0.05; // Minimum if user chooses to support
+export const MIN_BIRD_AMOUNT = 0.01;
+export const MAX_BIRD_AMOUNT = 1000;
+export const MINIMUM_SOL_FOR_GAS = 0.005; // SOL needed for transaction fees

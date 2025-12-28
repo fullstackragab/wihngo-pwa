@@ -5,6 +5,7 @@ import { TopBar } from "./top-bar";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Switch } from "./ui/switch";
+import { PRESET_BIRD_AMOUNTS, DEFAULT_WIHNGO_SUPPORT, MIN_WIHNGO_SUPPORT } from "@/types/payment";
 
 interface SupportFlowProps {
   birdId: string;
@@ -14,11 +15,12 @@ interface SupportFlowProps {
 }
 
 export function SupportFlow({ birdId, birdName, onBack, onComplete }: SupportFlowProps) {
-  const [step, setStep] = useState<"amount" | "fee" | "payment" | "confirmation">("amount");
-  const [amount, setAmount] = useState(1);
-  const [includeFee, setIncludeFee] = useState(true);
+  const [step, setStep] = useState<"amount" | "wihngo" | "payment" | "confirmation">("amount");
+  const [birdAmount, setBirdAmount] = useState(1);
+  const [supportWihngo, setSupportWihngo] = useState(true);
+  const [wihngoAmount, setWihngoAmount] = useState(DEFAULT_WIHNGO_SUPPORT);
 
-  // Screen 1: Choose Support Amount
+  // Screen 1: Choose Bird Support Amount
   if (step === "amount") {
     return (
       <div className="min-h-screen bg-background">
@@ -28,24 +30,24 @@ export function SupportFlow({ birdId, birdName, onBack, onComplete }: SupportFlo
           <div className="text-center space-y-2">
             <h2 className="text-foreground text-xl font-medium">Support {birdName}</h2>
             <p className="text-muted-foreground">
-              This goes to the bird&apos;s owner to buy food or care.
+              100% goes directly to {birdName}&apos;s care
             </p>
           </div>
 
           <Card className="p-8 space-y-6">
             {/* Amount buttons */}
             <div className="grid grid-cols-3 gap-3">
-              {[1, 3, 5].map((value) => (
+              {PRESET_BIRD_AMOUNTS.map((value) => (
                 <button
                   key={value}
-                  onClick={() => setAmount(value)}
+                  onClick={() => setBirdAmount(value)}
                   className={`p-6 rounded-xl border-2 transition-all ${
-                    amount === value
+                    birdAmount === value
                       ? "border-primary bg-primary/5"
                       : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <p className={`text-2xl font-medium ${amount === value ? "text-primary" : "text-foreground"}`}>
+                  <p className={`text-2xl font-medium ${birdAmount === value ? "text-primary" : "text-foreground"}`}>
                     ${value}
                   </p>
                 </button>
@@ -53,7 +55,7 @@ export function SupportFlow({ birdId, birdName, onBack, onComplete }: SupportFlo
             </div>
 
             <Button
-              onClick={() => setStep("fee")}
+              onClick={() => setStep("wihngo")}
               className="w-full h-12"
             >
               Continue
@@ -64,10 +66,10 @@ export function SupportFlow({ birdId, birdName, onBack, onComplete }: SupportFlo
     );
   }
 
-  // Screen 2: Fee Coverage
-  if (step === "fee") {
-    const platformFee = 0.05;
-    const total = includeFee ? amount + platformFee : amount;
+  // Screen 2: Optional Wihngo Support
+  if (step === "wihngo") {
+    const currentWihngoAmount = supportWihngo ? wihngoAmount : 0;
+    const total = birdAmount + currentWihngoAmount;
 
     return (
       <div className="min-h-screen bg-background">
@@ -76,31 +78,57 @@ export function SupportFlow({ birdId, birdName, onBack, onComplete }: SupportFlo
         <div className="max-w-lg mx-auto p-6 space-y-8 pt-12">
           <div className="text-center space-y-2">
             <p className="text-foreground">
-              You&apos;re sending <span className="font-medium text-primary">${amount}</span> to {birdName}
+              <span className="font-medium text-primary">${birdAmount}</span> will go to {birdName}
             </p>
           </div>
 
           <Card className="p-6 space-y-6">
-            {/* Toggle for fee coverage */}
+            {/* Toggle for Wihngo support */}
             <div className="flex items-start justify-between gap-4 py-2">
               <div className="flex-1 space-y-1">
-                <p className="font-medium text-foreground">Help support Wihngo</p>
-                <p className="text-sm text-muted-foreground">Add 5¢</p>
+                <p className="font-medium text-foreground">Support Wihngo too?</p>
+                <p className="text-sm text-muted-foreground">Optional and added on top</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Covers storage, hosting, and maintenance
+                  Helps cover hosting, storage, and platform development
                 </p>
               </div>
               <Switch
-                checked={includeFee}
-                onCheckedChange={setIncludeFee}
+                checked={supportWihngo}
+                onCheckedChange={setSupportWihngo}
                 className="mt-1"
               />
             </div>
 
-            {/* Total */}
-            <div className="pt-4 border-t border-border">
-              <div className="flex items-center justify-between">
-                <p className="text-foreground">Total</p>
+            {supportWihngo && (
+              <div className="pt-4 border-t border-border">
+                <div className="flex items-center gap-3">
+                  <span className="text-muted-foreground">$</span>
+                  <input
+                    type="number"
+                    value={wihngoAmount}
+                    onChange={(e) => setWihngoAmount(parseFloat(e.target.value) || MIN_WIHNGO_SUPPORT)}
+                    className="flex-1 h-10 px-3 rounded-xl bg-input-background border border-border focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary transition-all"
+                    min={MIN_WIHNGO_SUPPORT}
+                    step="0.01"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Summary */}
+            <div className="pt-4 border-t border-border space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">To {birdName}</span>
+                <span className="text-foreground">${birdAmount.toFixed(2)}</span>
+              </div>
+              {supportWihngo && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">To Wihngo (optional)</span>
+                  <span className="text-foreground">${wihngoAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <p className="font-medium text-foreground">Total</p>
                 <p className="text-2xl font-medium text-primary">
                   ${total.toFixed(2)}
                 </p>
@@ -111,14 +139,12 @@ export function SupportFlow({ birdId, birdName, onBack, onComplete }: SupportFlo
               onClick={() => setStep("payment")}
               className="w-full h-12"
             >
-              Continue to pay
+              Continue to Payment
             </Button>
 
-            <button
-              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              How fees work
-            </button>
+            <p className="text-center text-xs text-muted-foreground">
+              Bird money is sacred - {birdName} gets exactly ${birdAmount}
+            </p>
           </Card>
         </div>
       </div>
@@ -127,44 +153,47 @@ export function SupportFlow({ birdId, birdName, onBack, onComplete }: SupportFlo
 
   // Screen 3: Payment
   if (step === "payment") {
+    const currentWihngoAmount = supportWihngo ? wihngoAmount : 0;
+    const total = birdAmount + currentWihngoAmount;
+
     return (
       <div className="min-h-screen bg-background">
-        <TopBar title="Payment" onBack={() => setStep("fee")} />
+        <TopBar title="Payment" onBack={() => setStep("wihngo")} />
 
         <div className="max-w-lg mx-auto p-6 space-y-8 pt-12">
           <div className="text-center space-y-2">
             <h2 className="text-foreground text-xl font-medium">Confirm Payment</h2>
             <p className="text-muted-foreground">
-              Using digital dollars (USDC)
+              Using USDC on Solana
             </p>
           </div>
 
           <Card className="p-6 space-y-6">
             <div className="space-y-3 py-4">
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Amount to {birdName}</span>
-                <span className="text-foreground">${amount}</span>
+                <span className="text-muted-foreground">To {birdName}</span>
+                <span className="text-foreground">${birdAmount.toFixed(2)}</span>
               </div>
-              {includeFee && (
+              {supportWihngo && (
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Platform support</span>
-                  <span className="text-foreground">$0.05</span>
+                  <span className="text-muted-foreground">To Wihngo (optional)</span>
+                  <span className="text-foreground">${wihngoAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between items-center pt-3 border-t border-border">
                 <span className="font-medium text-foreground">Total</span>
                 <span className="font-medium text-primary">
-                  ${(includeFee ? amount + 0.05 : amount).toFixed(2)}
+                  ${total.toFixed(2)}
                 </span>
               </div>
             </div>
 
             <div className="bg-muted/50 rounded-lg p-4 space-y-2">
               <p className="text-sm text-foreground">
-                Near-zero transaction fees
+                Near-zero network costs
               </p>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Payments are processed on Solana for fast, affordable transactions
+                Payments are processed on Solana for fast, affordable transactions (~$0.001)
               </p>
             </div>
 
@@ -172,7 +201,7 @@ export function SupportFlow({ birdId, birdName, onBack, onComplete }: SupportFlo
               onClick={() => setStep("confirmation")}
               className="w-full h-12"
             >
-              Send ${(includeFee ? amount + 0.05 : amount).toFixed(2)}
+              Send ${total.toFixed(2)}
             </Button>
           </Card>
         </div>
@@ -181,21 +210,23 @@ export function SupportFlow({ birdId, birdName, onBack, onComplete }: SupportFlo
   }
 
   // Screen 4: Confirmation
+  const currentWihngoAmount = supportWihngo ? wihngoAmount : 0;
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="max-w-sm w-full text-center space-y-6">
         <div className="w-20 h-20 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
-          <span className="text-4xl">❤️</span>
+          <span className="text-4xl">&#10084;&#65039;</span>
         </div>
 
         <div className="space-y-2">
           <h2 className="text-foreground text-xl font-medium">Sent!</h2>
           <p className="text-lg text-muted-foreground">
-            ${amount} is on its way to {birdName}.
+            ${birdAmount.toFixed(2)} is on its way to {birdName}
           </p>
-          {includeFee && (
+          {supportWihngo && (
             <p className="text-sm text-muted-foreground">
-              Thanks for helping keep Wihngo running.
+              Thanks for supporting Wihngo too!
             </p>
           )}
         </div>
