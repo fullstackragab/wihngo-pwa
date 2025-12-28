@@ -14,6 +14,11 @@ import {
   Bird as BirdIcon,
   ArrowLeft,
   LogOut,
+  Info,
+  BookOpen,
+  HandHeart,
+  Feather,
+  Scale,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -165,6 +170,77 @@ export default function ProfilePage() {
                 <h4 className="mb-1">Wallet & Payments</h4>
                 <p className="text-sm text-muted-foreground">
                   Manage your wallet and view history
+                </p>
+              </div>
+            </div>
+          </Link>
+        </motion.div>
+
+        {/* Learn More Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="space-y-3"
+        >
+          <h3 className="text-sm font-medium text-muted-foreground px-1">
+            Learn More
+          </h3>
+          <Link href="/about">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">About Wihngo</h4>
+                <p className="text-sm text-muted-foreground">
+                  Our mission and values
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/why-birds-matter">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Feather className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">Why Birds Matter</h4>
+                <p className="text-sm text-muted-foreground">
+                  Understanding their vulnerability
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/support">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <HandHeart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">Support Birds</h4>
+                <p className="text-sm text-muted-foreground">
+                  How your help makes a difference
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/chicken-happiness">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <BookOpen className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">Chicken Happiness</h4>
+                <p className="text-sm text-muted-foreground">
+                  The right to a better life
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/our-principles">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Scale className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">Our Principles</h4>
+                <p className="text-sm text-muted-foreground">
+                  What we believe and how we operate
                 </p>
               </div>
             </div>
