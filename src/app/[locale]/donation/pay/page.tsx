@@ -4,11 +4,16 @@ import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getBird } from "@/services/bird.service";
-import { createPaymentIntent, confirmPayment, checkWalletBalance } from "@/services/payment.service";
+import {
+  preflightCheck,
+  createPaymentIntent,
+  submitPayment,
+} from "@/services/payment.service";
 import {
   MINIMUM_SOL_FOR_GAS,
-  TransactionConfirmation,
   PaymentIntentResponse,
+  PreflightResponse,
+  SubmitPaymentResponse,
 } from "@/types/payment";
 import { useAuth } from "@/contexts/auth-context";
 import { usePhantom } from "@/hooks/use-phantom";
@@ -26,20 +31,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { ApiError } from "@/services/api-helper";
-import {
-  Connection,
-  PublicKey,
-  Transaction,
-  clusterApiUrl,
-} from "@solana/web3.js";
-import {
-  createTransferInstruction,
-  getAssociatedTokenAddress,
-  createAssociatedTokenAccountInstruction,
-  getAccount,
-  TOKEN_PROGRAM_ID,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
 
 type PaymentStep =
   | "connect_wallet"
@@ -47,9 +38,8 @@ type PaymentStep =
   | "insufficient_funds"
   | "ready"
   | "creating_intent"
-  | "signing_bird"
-  | "signing_wihngo"
-  | "confirming"
+  | "signing"
+  | "submitting"
   | "success"
   | "error";
 
@@ -76,9 +66,6 @@ function parseApiError(err: unknown): string {
   return "An unexpected error occurred";
 }
 
-// USDC has 6 decimals
-const USDC_DECIMALS = 6;
-
 function PaymentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -94,16 +81,15 @@ function PaymentContent() {
     isPhantomInstalled,
     isConnected,
     connect,
-    signAndSendTransaction,
+    signTransaction,
     walletAddress,
-    publicKey,
   } = usePhantom();
 
   const [step, setStep] = useState<PaymentStep>("connect_wallet");
   const [error, setError] = useState<string>("");
   const [paymentIntent, setPaymentIntent] = useState<PaymentIntentResponse | null>(null);
-  const [birdSignature, setBirdSignature] = useState<string>("");
-  const [wihngoSignature, setWihngoSignature] = useState<string>("");
+  const [preflightData, setPreflightData] = useState<PreflightResponse | null>(null);
+  const [solanaSignature, setSolanaSignature] = useState<string>("");
   const [balanceInfo, setBalanceInfo] = useState<{
     solBalance: number;
     usdcBalance: number;
@@ -115,19 +101,27 @@ function PaymentContent() {
     enabled: !!birdId && isAuthenticated,
   });
 
+  const preflightMutation = useMutation({
+    mutationFn: () =>
+      preflightCheck({
+        birdId: birdId!,
+        birdAmount,
+        wihngoSupportAmount: wihngoAmount,
+      }),
+  });
+
   const createIntentMutation = useMutation({
     mutationFn: () =>
       createPaymentIntent({
-        type: "BIRD_SUPPORT",
         birdId: birdId!,
         birdAmount,
         wihngoAmount,
       }),
   });
 
-  const confirmMutation = useMutation({
-    mutationFn: (data: { intentId: string; transactions: TransactionConfirmation[] }) =>
-      confirmPayment(data),
+  const submitMutation = useMutation({
+    mutationFn: (data: { intentId: string; signedTransaction: string }) =>
+      submitPayment(data.intentId, data.signedTransaction),
   });
 
   useEffect(() => {
@@ -151,24 +145,27 @@ function PaymentContent() {
     setError("");
 
     try {
-      const data = await checkWalletBalance(walletAddress);
+      // Use preflight endpoint to check if user can make payment
+      const data = await preflightMutation.mutateAsync();
+      setPreflightData(data);
 
       setBalanceInfo({
         solBalance: data.solBalance || 0,
         usdcBalance: data.usdcBalance || 0,
       });
 
-      const hasEnoughSol = data.solBalance >= MINIMUM_SOL_FOR_GAS;
-      const hasEnoughUsdc = data.usdcBalance >= totalAmount;
-
-      if (!hasEnoughSol || !hasEnoughUsdc) {
+      if (!data.canSupport) {
+        // Backend tells us user can't support
+        if (data.errorCode) {
+          setError(data.message || "Unable to process payment");
+        }
         setStep("insufficient_funds");
       } else {
         setStep("ready");
       }
     } catch (err) {
-      console.error("Balance check error:", err);
-      // If balance check fails, still allow proceeding - will validate on-chain
+      console.error("Preflight check error:", err);
+      // If preflight fails, still allow proceeding - will validate on create intent
       setStep("ready");
     }
   };
@@ -184,58 +181,8 @@ function PaymentContent() {
     }
   };
 
-  const buildUsdcTransferTransaction = async (
-    connection: Connection,
-    fromPubkey: PublicKey,
-    toPubkey: PublicKey,
-    usdcMint: PublicKey,
-    amountUsdc: number
-  ): Promise<Transaction> => {
-    const fromAta = await getAssociatedTokenAddress(usdcMint, fromPubkey);
-    const toAta = await getAssociatedTokenAddress(usdcMint, toPubkey);
-
-    const transaction = new Transaction();
-
-    // Check if destination ATA exists, create if needed
-    try {
-      await getAccount(connection, toAta);
-    } catch {
-      // ATA doesn't exist, add instruction to create it
-      transaction.add(
-        createAssociatedTokenAccountInstruction(
-          fromPubkey, // payer
-          toAta, // ata
-          toPubkey, // owner
-          usdcMint, // mint
-          TOKEN_PROGRAM_ID,
-          ASSOCIATED_TOKEN_PROGRAM_ID
-        )
-      );
-    }
-
-    // Convert amount to USDC units (6 decimals)
-    const amountUnits = Math.round(amountUsdc * Math.pow(10, USDC_DECIMALS));
-
-    // Add transfer instruction
-    transaction.add(
-      createTransferInstruction(
-        fromAta, // source
-        toAta, // destination
-        fromPubkey, // owner
-        amountUnits // amount
-      )
-    );
-
-    // Get recent blockhash
-    const { blockhash } = await connection.getLatestBlockhash();
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = fromPubkey;
-
-    return transaction;
-  };
-
   const handleProceedToPayment = async () => {
-    if (!publicKey || !walletAddress) {
+    if (!walletAddress) {
       setError("Wallet not connected");
       return;
     }
@@ -244,67 +191,35 @@ function PaymentContent() {
       setError("");
       setStep("creating_intent");
 
-      // Create payment intent
+      // Step 1: Create payment intent - backend builds the transaction
       const intent = await createIntentMutation.mutateAsync();
       setPaymentIntent(intent);
 
-      // Connect to Solana
-      const connection = new Connection(
-        process.env.NEXT_PUBLIC_SOLANA_RPC_URL || clusterApiUrl("mainnet-beta"),
-        "confirmed"
-      );
+      // Step 2: Sign the transaction with Phantom (just sign, don't send)
+      setStep("signing");
+      const signedTransaction = await signTransaction(intent.serializedTransaction);
 
-      const usdcMint = new PublicKey(intent.usdcMint);
-      const transactions: TransactionConfirmation[] = [];
-
-      // Send bird transfer if there's a bird amount
-      if (birdAmount > 0 && intent.birdWallet) {
-        setStep("signing_bird");
-
-        const birdWalletPubkey = new PublicKey(intent.birdWallet);
-        const birdTx = await buildUsdcTransferTransaction(
-          connection,
-          publicKey,
-          birdWalletPubkey,
-          usdcMint,
-          birdAmount
-        );
-
-        const birdSig = await signAndSendTransaction(birdTx);
-        setBirdSignature(birdSig);
-        transactions.push({ type: "BIRD", signature: birdSig });
-      }
-
-      // Send wihngo transfer if there's a wihngo amount
-      if (wihngoAmount > 0) {
-        setStep("signing_wihngo");
-
-        const wihngoWalletPubkey = new PublicKey(intent.wihngoWallet);
-        const wihngoTx = await buildUsdcTransferTransaction(
-          connection,
-          publicKey,
-          wihngoWalletPubkey,
-          usdcMint,
-          wihngoAmount
-        );
-
-        const wihngoSig = await signAndSendTransaction(wihngoTx);
-        setWihngoSignature(wihngoSig);
-        transactions.push({ type: "WIHNGO", signature: wihngoSig });
-      }
-
-      // Confirm with backend
-      setStep("confirming");
-      const result = await confirmMutation.mutateAsync({
+      // Step 3: Submit signed transaction to backend - backend submits to Solana
+      setStep("submitting");
+      const result = await submitMutation.mutateAsync({
         intentId: intent.intentId,
-        transactions,
+        signedTransaction,
       });
 
-      if (result.success) {
+      // Store the Solana signature for display
+      if (result.solanaSignature) {
+        setSolanaSignature(result.solanaSignature);
+      }
+
+      // Check status
+      if (result.status === "Completed" || result.status === "Confirming" || result.status === "Processing") {
         setStep("success");
-      } else {
-        setError(result.message || "Payment confirmation failed");
+      } else if (result.status === "Failed") {
+        setError(result.message || "Payment failed");
         setStep("error");
+      } else {
+        // For other statuses, treat as success (backend is processing)
+        setStep("success");
       }
     } catch (err) {
       console.error("Payment error:", err);
@@ -555,43 +470,28 @@ function PaymentContent() {
           </div>
         );
 
-      case "signing_bird":
+      case "signing":
         return (
           <div className="text-center py-12">
             <LoadingSpinner className="mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-foreground mb-2">
-              Approve Transfer to {bird?.name}
+              Approve Transaction
             </h2>
             <p className="text-muted-foreground">
-              Please approve the ${birdAmount.toFixed(2)} USDC transfer in your Phantom
-              wallet
+              Please approve the ${totalAmount.toFixed(2)} USDC transfer in your Phantom wallet
             </p>
           </div>
         );
 
-      case "signing_wihngo":
+      case "submitting":
         return (
           <div className="text-center py-12">
             <LoadingSpinner className="mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-foreground mb-2">
-              Approve Wihngo Support
+              Processing Payment
             </h2>
             <p className="text-muted-foreground">
-              Please approve the ${wihngoAmount.toFixed(2)} USDC transfer in your Phantom
-              wallet
-            </p>
-          </div>
-        );
-
-      case "confirming":
-        return (
-          <div className="text-center py-12">
-            <LoadingSpinner className="mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-foreground mb-2">
-              Confirming Payment
-            </h2>
-            <p className="text-muted-foreground">
-              Verifying your transactions on the blockchain...
+              Submitting your transaction to the blockchain...
             </p>
           </div>
         );
@@ -604,13 +504,13 @@ function PaymentContent() {
             </div>
             <h2 className="text-xl font-bold text-foreground mb-2">Thank You!</h2>
             <p className="text-muted-foreground mb-2">
-              Your support for {bird?.name} was successful!
+              Your support for {bird?.name || preflightData?.bird?.name} was successful!
             </p>
 
             <Card variant="outlined" className="text-left mb-6 mt-4">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">To {bird?.name}</span>
+                  <span className="text-muted-foreground">To {bird?.name || preflightData?.bird?.name}</span>
                   <span className="font-medium">${birdAmount.toFixed(2)}</span>
                 </div>
                 {wihngoAmount > 0 && (
@@ -625,13 +525,25 @@ function PaymentContent() {
                     ${totalAmount.toFixed(2)}
                   </span>
                 </div>
+                {solanaSignature && (
+                  <div className="pt-2 border-t border-border">
+                    <a
+                      href={`https://solscan.io/tx/${solanaSignature}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-sm text-purple-600 hover:underline"
+                    >
+                      View on Solscan <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
               </div>
             </Card>
 
             <div className="space-y-3">
               <Button fullWidth onClick={() => router.push(`/bird/${birdId}`)}>
                 <Heart className="w-4 h-4 mr-2" />
-                Back to {bird?.name}
+                Back to {bird?.name || preflightData?.bird?.name || "Bird"}
               </Button>
               <Button variant="outline" fullWidth onClick={() => router.push("/birds")}>
                 Support More Birds
@@ -677,9 +589,8 @@ function PaymentContent() {
             onClick={() => router.back()}
             className="p-2 -ml-2"
             disabled={
-              step === "signing_bird" ||
-              step === "signing_wihngo" ||
-              step === "confirming" ||
+              step === "signing" ||
+              step === "submitting" ||
               step === "creating_intent"
             }
           >

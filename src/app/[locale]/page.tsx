@@ -1,7 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { getFeaturedBirds } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
 import { BottomNav } from "@/components/bottom-nav";
 import { LoadingScreen } from "@/components/ui/loading";
@@ -13,12 +11,6 @@ import { motion } from "motion/react";
 
 export default function HomePage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-
-  const { data: featuredBirds, isLoading: birdsLoading } = useQuery({
-    queryKey: ["featuredBirds"],
-    queryFn: getFeaturedBirds,
-    enabled: isAuthenticated,
-  });
 
   if (authLoading) {
     return <LoadingScreen />;

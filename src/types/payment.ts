@@ -1,13 +1,12 @@
-// Payment Intent Types - Bird-first payment model
+// Payment Types - Aligned with Backend API
 // Bird money is sacred: 100% goes to bird owner
 // Wihngo support is optional, transparent, and additive
 
 export type PaymentIntentStatus =
   | "Pending"
-  | "AwaitingSignature"
-  | "Submitted"
+  | "AwaitingPayment"
+  | "Processing"
   | "Confirming"
-  | "Confirmed"
   | "Completed"
   | "Failed"
   | "Expired"
@@ -15,124 +14,133 @@ export type PaymentIntentStatus =
 
 export const TERMINAL_STATUSES: PaymentIntentStatus[] = [
   "Completed",
-  "Confirmed",
   "Failed",
   "Expired",
   "Cancelled",
 ];
 
-export const SUCCESS_STATUSES: PaymentIntentStatus[] = ["Completed", "Confirmed"];
+export const SUCCESS_STATUSES: PaymentIntentStatus[] = ["Completed"];
 
-// Payment Intent Types
-export type PaymentIntentType = "BIRD_SUPPORT" | "WIHNGO_SUPPORT";
-
+// Create Payment Intent - Request to backend
 export interface CreatePaymentIntentRequest {
-  type: PaymentIntentType;
-  birdId?: string;
+  birdId: string;
   birdAmount: number;
-  wihngoAmount: number;
+  wihngoSupportAmount: number;
+  currency: "USDC";
 }
 
+// Payment Intent - Full response from backend
+export interface PaymentIntent {
+  intentId: string;
+  birdId: string;
+  birdName: string;
+  recipientUserId: string;
+  recipientName: string;
+  birdWalletAddress: string;
+  wihngoWalletAddress: string | null;
+  birdAmount: number;
+  wihngoSupportAmount: number;
+  totalAmount: number;
+  currency: string;
+  usdcMintAddress: string;
+  status: PaymentIntentStatus;
+  serializedTransaction: string;
+  solanaSignature?: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+// Mapped response for frontend convenience
 export interface PaymentIntentResponse {
   intentId: string;
   birdWallet: string | null;
-  wihngoWallet: string;
+  wihngoWallet: string | null;
   usdcMint: string;
+  serializedTransaction: string;
   expiresAt: string;
 }
 
-export interface TransactionConfirmation {
-  type: "BIRD" | "WIHNGO";
-  signature: string;
+// Submit signed transaction
+export interface SubmitPaymentRequest {
+  signedTransaction: string;
 }
 
-export interface ConfirmPaymentRequest {
+export interface SubmitPaymentResponse {
   intentId: string;
-  transactions: TransactionConfirmation[];
+  status: PaymentIntentStatus;
+  solanaSignature?: string;
+  message?: string;
 }
 
-export interface ConfirmPaymentResponse {
-  success: boolean;
-  message: string;
-  birdTransactionVerified?: boolean;
-  wihngoTransactionVerified?: boolean;
+// Preflight check before payment
+export interface PreflightRequest {
+  birdId: string;
+  birdAmount: number;
+  wihngoSupportAmount: number;
 }
 
-// Wallet Balance Types
-export interface WalletBalance {
-  walletAddress: string;
-  solBalance: number;
+export interface PreflightResponse {
+  canSupport: boolean;
+  hasWallet: boolean;
   usdcBalance: number;
-  hasMinimumSol: boolean;
-  canAfford: (amount: number) => boolean;
+  solBalance: number;
+  birdAmount: number;
+  wihngoSupportAmount: number;
+  totalUsdcRequired: number;
+  solRequired: number;
+  errorCode?: string;
+  message?: string;
+  bird: {
+    birdId: string;
+    name: string;
+    imageUrl?: string;
+  };
+  recipient: {
+    userId: string;
+    name: string;
+    walletAddress?: string;
+  };
+  usdcMintAddress: string;
+  wihngoWalletAddress: string;
 }
 
-export interface BalanceCheckResponse {
+// On-chain balance check (public endpoint)
+export interface OnChainBalanceResponse {
   walletAddress: string;
   solBalance: number;
   usdcBalance: number;
   minimumSolRequired: number;
 }
 
-// Legacy types for backwards compatibility
-export interface PaymentIntent {
-  paymentId: string;
-  status: PaymentIntentStatus;
-  supportAmount: number;
-  platformSupportAmount?: number;
-  totalAmount: number;
-  currency: string;
-  birdId: string;
-  birdName?: string;
-  serializedTransaction?: string;
-  expiresAt?: string;
-  createdAt: string;
-}
-
+// Payment status polling
 export interface PaymentStatus {
-  paymentId: string;
+  intentId: string;
   status: PaymentIntentStatus;
-  amountUsdc: number;
-  feeUsdc: number;
+  birdAmount: number;
+  wihngoSupportAmount: number;
+  totalAmount: number;
   solanaSignature?: string;
-  confirmations: number;
-  requiredConfirmations: number;
   createdAt: string;
   confirmedAt?: string;
-  memo?: string;
 }
 
-export interface SubmitPaymentRequest {
-  paymentId: string;
-  signedTransaction: string;
-}
-
-export interface SubmitPaymentResponse {
-  paymentId: string;
-  status: PaymentIntentStatus;
-  solanaSignature?: string;
-  errorMessage?: string;
-}
-
-export interface UserBalance {
-  balanceUsdc: number;
-  availableUsdc: number;
-  pendingUsdc: number;
-  hasGas: boolean;
-  walletAddress: string;
-}
-
+// Payment history
 export interface PaymentHistoryItem {
   paymentId: string;
+  type: "P2P" | "BIRD_SUPPORT";
   status: PaymentIntentStatus;
-  amountUsdc: number;
-  memo?: string;
+  amount: number;
+  currency: string;
   createdAt: string;
-  isSender: boolean;
   otherParty: {
     userId: string;
     name: string;
     profileImage?: string;
+  };
+  bird?: {
+    birdId: string;
+    name: string;
+    imageUrl?: string;
   };
 }
 
@@ -143,6 +151,7 @@ export interface PaymentHistoryResponse {
   pageSize: number;
 }
 
+// Wallet linking
 export interface LinkWalletRequest {
   publicKey: string;
   signature: string;
@@ -156,12 +165,40 @@ export interface LinkedWallet {
   linkedAt: string;
 }
 
-// Constants - Bird-first values
+// User balance (authenticated)
+export interface UserBalance {
+  balanceUsdc: number;
+  availableUsdc: number;
+  pendingUsdc: number;
+  hasGas: boolean;
+  walletAddress: string;
+}
+
+// Constants
 export const PRESET_BIRD_AMOUNTS = [1, 3, 5] as const;
 export type PresetBirdAmount = (typeof PRESET_BIRD_AMOUNTS)[number];
 
-export const DEFAULT_WIHNGO_SUPPORT = 0.05; // $0.05 - minimum suggested
-export const MIN_WIHNGO_SUPPORT = 0.05; // Minimum if user chooses to support
+export const DEFAULT_WIHNGO_SUPPORT = 0.05;
+export const MIN_WIHNGO_SUPPORT = 0.05;
 export const MIN_BIRD_AMOUNT = 0.01;
 export const MAX_BIRD_AMOUNT = 1000;
-export const MINIMUM_SOL_FOR_GAS = 0.005; // SOL needed for transaction fees
+export const MINIMUM_SOL_FOR_GAS = 0.005;
+
+// Legacy exports for backwards compatibility
+export type TransactionConfirmation = {
+  type: "BIRD" | "WIHNGO";
+  signature: string;
+};
+
+export type ConfirmPaymentRequest = {
+  intentId: string;
+  transactions: TransactionConfirmation[];
+};
+
+export type ConfirmPaymentResponse = {
+  success: boolean;
+  message: string;
+};
+
+// Alias for backwards compatibility
+export type BalanceCheckResponse = OnChainBalanceResponse;

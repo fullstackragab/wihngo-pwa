@@ -42,10 +42,8 @@ export async function searchBirds(query: string): Promise<Bird[]> {
   return response.items;
 }
 
-export async function getFeaturedBirds(): Promise<Bird[]> {
-  const response = await publicGet<BirdListResponse>("birds?featured=true&pageSize=5");
-  return response.items ?? [];
-}
+// Note: getFeaturedBirds removed - "All birds are equal" principle
+// Birds are ordered by recent activity, not featured status
 
 export async function getUserBirds(userId: string): Promise<Bird[]> {
   const response = await apiHelper.get<BirdListResponse>(`users/${userId}/birds`);
