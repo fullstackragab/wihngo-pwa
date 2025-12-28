@@ -74,13 +74,6 @@ export function OurPrinciples({ onBack }: OurPrinciplesProps) {
             </p>
           </div>
         </Card>
-
-        <Card className="p-6 bg-accent/30 border-accent">
-          <p className="text-sm text-foreground leading-relaxed">
-            We&apos;re not a charity—we&apos;re a for-profit platform. But we believe profit and ethics aren&apos;t opposites.
-            We can build something sustainable that genuinely serves the community.
-          </p>
-        </Card>
       </div>
     </div>
   );
