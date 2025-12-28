@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { PublicKey, Transaction, VersionedTransaction, Connection } from "@solana/web3.js";
 import bs58 from "bs58";
 import { detectPlatform, isMobileDevice, getPhantomDeepLink, getRedirectUrl } from "@/lib/phantom/platform";
+import { SOLANA_CONFIG } from "@/lib/config";
 
 // Try to import the SDK hooks - they may not be available in all contexts
 let useSolanaSDK: (() => { solana: SolanaSDK }) | undefined;
@@ -227,7 +228,7 @@ export function usePhantom(): UsePhantomResult {
       const deepLink = getPhantomDeepLink("connect", {
         app_url: window.location.origin,
         redirect_link: redirectUrl,
-        cluster: "mainnet-beta",
+        cluster: SOLANA_CONFIG.network,
       });
 
       // Open Phantom app

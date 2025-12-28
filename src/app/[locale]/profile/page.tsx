@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { usePhantom } from "@/hooks/use-phantom";
 import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
-import { LoadingScreen } from "@/components/ui/loading";
+import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
 import {
   User,
   Wallet,
@@ -21,6 +21,9 @@ import {
   Scale,
   Lightbulb,
   Library,
+  ExternalLink,
+  FileText,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -28,8 +31,23 @@ import { motion } from "motion/react";
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
-  const { isConnected, walletAddress, connect } = usePhantom();
+  const { isConnected, walletAddress, connect, isPhantomInstalled } = usePhantom();
   const router = useRouter();
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+
+  const handleConnectWallet = async () => {
+    setIsConnecting(true);
+    setConnectError(null);
+    try {
+      await connect();
+    } catch (err) {
+      console.error("Wallet connection error:", err);
+      setConnectError(err instanceof Error ? err.message : "Failed to connect wallet");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -105,8 +123,8 @@ export default function ProfilePage() {
                 <Wallet className="w-5 h-5 text-primary" />
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm">Wallet Connected</span>
-                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <span className="text-sm font-medium">Wallet Connected</span>
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
                   </div>
                   <p className="text-xs text-muted-foreground font-mono break-all">
                     {walletAddress}
@@ -114,21 +132,47 @@ export default function ProfilePage() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <Wallet className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    No wallet connected
-                  </span>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Wallet className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      No wallet connected
+                    </span>
+                  </div>
+                  <Button
+                    onClick={handleConnectWallet}
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    disabled={isConnecting}
+                  >
+                    {isConnecting ? (
+                      <>
+                        <LoadingSpinner className="w-4 h-4 mr-2" />
+                        Connecting...
+                      </>
+                    ) : (
+                      "Connect"
+                    )}
+                  </Button>
                 </div>
-                <Button
-                  onClick={connect}
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full"
-                >
-                  Connect
-                </Button>
+                {!isPhantomInstalled && (
+                  <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
+                    <span>Phantom wallet not detected.</span>
+                    <a
+                      href="https://phantom.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-purple-600 font-medium hover:underline"
+                    >
+                      Get Phantom <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
+                {connectError && (
+                  <p className="text-xs text-destructive">{connectError}</p>
+                )}
               </div>
             )}
           </div>
@@ -270,6 +314,30 @@ export default function ProfilePage() {
                 <h4 className="mb-1">Our Principles</h4>
                 <p className="text-sm text-muted-foreground">
                   What we believe and how we operate
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/manifesto">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">Manifesto</h4>
+                <p className="text-sm text-muted-foreground">
+                  Our philosophy on living with birds
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/open-call">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Users className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">Open Call</h4>
+                <p className="text-sm text-muted-foreground">
+                  Join us in building bird-friendly tools
                 </p>
               </div>
             </div>

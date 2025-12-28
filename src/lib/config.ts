@@ -39,7 +39,12 @@ export const VALIDATION = {
 };
 
 // Solana configuration
+// Set via env vars or defaults to devnet for development
 export const SOLANA_CONFIG = {
-  network: "mainnet-beta" as const,
-  usdcMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  network: (process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet") as "devnet" | "mainnet-beta",
+  usdcMint: process.env.NEXT_PUBLIC_USDC_MINT || "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+  // Wihngo platform wallet to receive support payments
+  wihngoWallet: process.env.NEXT_PUBLIC_WIHNGO_WALLET || "6GXVP4mTMNqihNARivweYwc6rtuih1ivoJN7bcAEWWCV",
+  // Mainnet USDC: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
+  // Devnet USDC: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
 };

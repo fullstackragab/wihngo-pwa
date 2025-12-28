@@ -98,7 +98,7 @@ function PaymentContent() {
   const { data: bird } = useQuery({
     queryKey: ["bird", birdId],
     queryFn: () => getBird(birdId!),
-    enabled: !!birdId && isAuthenticated,
+    enabled: !!birdId && birdId !== "wihngo" && isAuthenticated,
   });
 
   const preflightMutation = useMutation({
@@ -228,7 +228,14 @@ function PaymentContent() {
     }
   };
 
-  if (!birdId || birdAmount <= 0) {
+  // Allow bird support (birdAmount > 0) or wihngo-only support (wihngoAmount > 0)
+  const isWihngoOnly = birdId === "wihngo" && wihngoAmount > 0;
+  const isBirdSupport = birdId && birdId !== "wihngo" && birdAmount > 0;
+
+  // Display name for UI
+  const recipientName = isWihngoOnly ? "Wihngo" : (bird?.name || preflightData?.bird?.name || "Bird");
+
+  if (!isWihngoOnly && !isBirdSupport) {
     return (
       <div className="min-h-screen-safe flex items-center justify-center">
         <div className="text-center">
@@ -252,7 +259,7 @@ function PaymentContent() {
                 Connect Your Wallet
               </h2>
               <p className="text-muted-foreground">
-                Connect your Phantom wallet to support {bird?.name}
+                Connect your Phantom wallet to support {recipientName}
               </p>
             </div>
 
@@ -284,7 +291,6 @@ function PaymentContent() {
               fullWidth
               size="lg"
               onClick={handleConnectWallet}
-              disabled={!isPhantomInstalled}
               className="bg-purple-600 hover:bg-purple-700"
             >
               <Wallet className="w-5 h-5 mr-2" />
@@ -390,7 +396,7 @@ function PaymentContent() {
                 Confirm Support
               </h2>
               <p className="text-muted-foreground">
-                Review your support for {bird?.name}
+                Review your support for {recipientName}
               </p>
             </div>
 
@@ -420,13 +426,17 @@ function PaymentContent() {
 
             <Card variant="outlined" className="mb-6">
               <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">To {bird?.name}</span>
-                  <span className="font-medium">${birdAmount.toFixed(2)} USDC</span>
-                </div>
+                {birdAmount > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">To {recipientName}</span>
+                    <span className="font-medium">${birdAmount.toFixed(2)} USDC</span>
+                  </div>
+                )}
                 {wihngoAmount > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">To Wihngo (optional)</span>
+                    <span className="text-muted-foreground">
+                      {isWihngoOnly ? "To Wihngo" : "To Wihngo (optional)"}
+                    </span>
                     <span className="font-medium">${wihngoAmount.toFixed(2)} USDC</span>
                   </div>
                 )}
@@ -504,15 +514,17 @@ function PaymentContent() {
             </div>
             <h2 className="text-xl font-bold text-foreground mb-2">Thank You!</h2>
             <p className="text-muted-foreground mb-2">
-              Your support for {bird?.name || preflightData?.bird?.name} was successful!
+              Your support for {recipientName} was successful!
             </p>
 
             <Card variant="outlined" className="text-left mb-6 mt-4">
               <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">To {bird?.name || preflightData?.bird?.name}</span>
-                  <span className="font-medium">${birdAmount.toFixed(2)}</span>
-                </div>
+                {birdAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">To {recipientName}</span>
+                    <span className="font-medium">${birdAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 {wihngoAmount > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">To Wihngo</span>
@@ -541,9 +553,9 @@ function PaymentContent() {
             </Card>
 
             <div className="space-y-3">
-              <Button fullWidth onClick={() => router.push(`/bird/${birdId}`)}>
+              <Button fullWidth onClick={() => router.push(isWihngoOnly ? "/" : `/bird/${birdId}`)}>
                 <Heart className="w-4 h-4 mr-2" />
-                Back to {bird?.name || preflightData?.bird?.name || "Bird"}
+                {isWihngoOnly ? "Back to Home" : `Back to ${recipientName}`}
               </Button>
               <Button variant="outline" fullWidth onClick={() => router.push("/birds")}>
                 Support More Birds
@@ -601,10 +613,14 @@ function PaymentContent() {
       </header>
 
       <main className="px-4 py-6 max-w-lg mx-auto">
-        {bird && !["success", "error"].includes(step) && (
+        {!["success", "error"].includes(step) && (
           <Card variant="outlined" className="flex items-center gap-4 mb-8">
             <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-muted flex-shrink-0">
-              {bird.imageUrl ? (
+              {isWihngoOnly ? (
+                <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                  <Heart className="w-6 h-6 text-primary" />
+                </div>
+              ) : bird?.imageUrl ? (
                 <Image
                   src={bird.imageUrl}
                   alt={bird.name || "Bird"}
@@ -618,8 +634,10 @@ function PaymentContent() {
               )}
             </div>
             <div className="flex-1">
-              <h2 className="font-semibold text-foreground">{bird.name}</h2>
-              <p className="text-sm text-muted-foreground">{bird.species}</p>
+              <h2 className="font-semibold text-foreground">{recipientName}</h2>
+              <p className="text-sm text-muted-foreground">
+                {isWihngoOnly ? "Platform Support" : bird?.species || "Bird"}
+              </p>
             </div>
             <div className="text-right">
               <p className="font-bold text-primary">${totalAmount.toFixed(2)}</p>
