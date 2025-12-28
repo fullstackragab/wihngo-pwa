@@ -1,4 +1,4 @@
-import { apiHelper } from "./api-helper";
+import { apiHelper, publicGet } from "./api-helper";
 import { Bird, CreateBirdDto, UpdateBirdDto } from "@/types/bird";
 
 interface BirdListResponse {
@@ -8,12 +8,13 @@ interface BirdListResponse {
   totalCount: number;
 }
 
+// Public endpoints - no auth required
 export async function getBirds(page = 1, pageSize = 20): Promise<BirdListResponse> {
-  return apiHelper.get<BirdListResponse>(`birds?page=${page}&pageSize=${pageSize}`);
+  return publicGet<BirdListResponse>(`birds?page=${page}&pageSize=${pageSize}`);
 }
 
 export async function getBird(birdId: string): Promise<Bird> {
-  return apiHelper.get<Bird>(`birds/${birdId}`);
+  return publicGet<Bird>(`birds/${birdId}`);
 }
 
 export async function createBird(data: CreateBirdDto): Promise<Bird> {
@@ -37,12 +38,12 @@ export async function unloveBird(birdId: string): Promise<void> {
 }
 
 export async function searchBirds(query: string): Promise<Bird[]> {
-  const response = await apiHelper.get<BirdListResponse>(`birds/search?q=${encodeURIComponent(query)}`);
+  const response = await publicGet<BirdListResponse>(`birds/search?q=${encodeURIComponent(query)}`);
   return response.items;
 }
 
 export async function getFeaturedBirds(): Promise<Bird[]> {
-  const response = await apiHelper.get<BirdListResponse>("birds?featured=true&pageSize=5");
+  const response = await publicGet<BirdListResponse>("birds?featured=true&pageSize=5");
   return response.items ?? [];
 }
 

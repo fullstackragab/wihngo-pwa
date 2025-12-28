@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { getBirds, searchBirds } from "@/services/bird.service";
-import { useAuth } from "@/contexts/auth-context";
 import { BirdCard } from "@/components/bird-card";
 import { BottomNav } from "@/components/bottom-nav";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -13,32 +12,21 @@ import { Input } from "@/components/ui/input";
 import { Search, ArrowLeft, Bird } from "lucide-react";
 
 export default function BirdsPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
 
+  // Birds are publicly viewable - "All birds are equal"
   const { data, isLoading, error } = useQuery({
     queryKey: ["birds", page],
     queryFn: () => getBirds(page, 20),
-    enabled: isAuthenticated,
   });
 
   const { data: searchResults, isLoading: searchLoading } = useQuery({
     queryKey: ["birdsSearch", searchQuery],
     queryFn: () => searchBirds(searchQuery),
-    enabled: isAuthenticated && searchQuery.length >= 2,
+    enabled: searchQuery.length >= 2,
   });
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push("/auth/login");
-    }
-  }, [authLoading, isAuthenticated, router]);
-
-  if (authLoading || !isAuthenticated) {
-    return null;
-  }
 
   const birds = searchQuery.length >= 2 ? searchResults : data?.items;
   const loading = isLoading || searchLoading;

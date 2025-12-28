@@ -39,6 +39,46 @@ export class ApiError extends Error {
   }
 }
 
+// Public fetch - no authentication required
+export async function publicFetch(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const absoluteUrl = buildUrl(url);
+
+  const headers = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...options.headers,
+  };
+
+  return fetch(absoluteUrl, {
+    ...options,
+    headers,
+  });
+}
+
+export async function publicGet<T>(url: string): Promise<T> {
+  const response = await publicFetch(url, { method: "GET" });
+
+  if (!response.ok) {
+    let errorData;
+    const responseText = await response.text();
+    try {
+      errorData = JSON.parse(responseText);
+    } catch {
+      errorData = responseText;
+    }
+    throw new ApiError(response.status, response.statusText, errorData);
+  }
+
+  if (response.status === 204) {
+    return {} as T;
+  }
+
+  return await response.json();
+}
+
 export async function authenticatedFetch(
   url: string,
   options: RequestInit = {}
