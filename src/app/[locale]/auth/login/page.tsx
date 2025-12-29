@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { login } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Bird } from "lucide-react";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,9 +47,13 @@ export default function LoginPage() {
         <div className="max-w-sm mx-auto w-full space-y-8">
           {/* Logo */}
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-full bg-primary flex items-center justify-center">
-              <Bird className="w-8 h-8 text-primary-foreground" />
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Wihngo"
+              width={160}
+              height={160}
+              className="mx-auto"
+            />
             <div>
               <h1 className="text-2xl font-medium text-foreground">Welcome back</h1>
               <p className="text-muted-foreground mt-1">Sign in to continue</p>

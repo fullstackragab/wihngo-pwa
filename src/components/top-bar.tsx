@@ -2,6 +2,7 @@
 
 import { ArrowLeft } from "lucide-react";
 import { Button } from "./ui/button";
+import Image from "next/image";
 
 interface TopBarProps {
   title: string;
@@ -27,9 +28,16 @@ export function TopBar({ title, onBack, showLogo }: TopBarProps) {
         )}
 
         {showLogo ? (
-          <h1 className="text-primary flex items-center gap-2 text-xl font-medium">
-            Wihngo
-          </h1>
+          <div className="flex items-center gap-2">
+            <Image
+              src="/logo.png"
+              alt="Wihngo"
+              width={32}
+              height={32}
+              className="w-8 h-8"
+            />
+            <span className="text-primary text-xl font-medium">Wihngo</span>
+          </div>
         ) : (
           <h2 className="text-foreground font-medium">{title}</h2>
         )}

@@ -14,14 +14,14 @@ import {
 } from "@/types/support";
 
 // ============================================
-// SUPPORT INTENT FLOW
+// SUPPORT INTENT FLOW (Bird Support)
 // ============================================
 
-// Step 1: Preflight check - verify user can support
+// Step 1: Preflight check - verify user can support a bird
 export async function preflightCheck(
   data: PreflightRequest
 ): Promise<PreflightResponse> {
-  return apiHelper.post<PreflightResponse>("payments/support/preflight", data);
+  return apiHelper.post<PreflightResponse>("support/birds/preflight", data);
 }
 
 // Step 2: Create support intent - backend builds the transaction
@@ -30,7 +30,7 @@ export async function createSupportIntent(params: {
   birdAmount: number;
   wihngoAmount: number;
 }): Promise<SupportIntentResponse> {
-  const response = await apiHelper.post<SupportIntent>("payments/intents", {
+  const response = await apiHelper.post<SupportIntent>("support/intents", {
     birdId: params.birdId,
     birdAmount: params.birdAmount,
     wihngoSupportAmount: params.wihngoAmount,
@@ -54,19 +54,19 @@ export async function submitSupport(
   signedTransaction: string
 ): Promise<SubmitSupportResponse> {
   return apiHelper.post<SubmitSupportResponse>(
-    `payments/intents/${intentId}/submit`,
+    `support/intents/${intentId}/submit`,
     { signedTransaction }
   );
 }
 
 // Step 4: Poll for support status
 export async function getSupportStatus(intentId: string): Promise<SupportIntent> {
-  return apiHelper.get<SupportIntent>(`payments/intents/${intentId}`);
+  return apiHelper.get<SupportIntent>(`support/intents/${intentId}`);
 }
 
 // Cancel a pending support intent
 export async function cancelSupport(intentId: string): Promise<void> {
-  return apiHelper.post(`payments/intents/${intentId}/cancel`, {});
+  return apiHelper.post(`support/intents/${intentId}/cancel`, {});
 }
 
 // ============================================
@@ -79,7 +79,7 @@ export async function getSupportHistory(
   pageSize = 20
 ): Promise<SupportHistoryResponse> {
   return apiHelper.get<SupportHistoryResponse>(
-    `payments/support-history?page=${page}&pageSize=${pageSize}`
+    `support/history?page=${page}&pageSize=${pageSize}`
   );
 }
 
@@ -87,9 +87,9 @@ export async function getSupportHistory(
 // WALLET MANAGEMENT
 // ============================================
 
-// Link a new wallet (requires signature verification)
-export async function linkWallet(data: LinkWalletRequest): Promise<LinkedWallet> {
-  return apiHelper.post<LinkedWallet>("wallets/link", data);
+// Link a new wallet to user account
+export async function linkWallet(publicKey: string): Promise<LinkedWallet> {
+  return apiHelper.post<LinkedWallet>("wallets/link", { publicKey });
 }
 
 // Get user's linked wallets

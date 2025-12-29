@@ -86,7 +86,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <html lang={locale} dir={dir}>
       <head>
-        <link rel="apple-touch-icon" href="/icon.png" />
+        <link rel="apple-touch-icon" href="/logo.png" />
         <link rel="icon" type="image/png" href="/favicon.png" />
       </head>
       <body

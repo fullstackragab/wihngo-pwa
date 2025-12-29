@@ -170,7 +170,7 @@ export default function StoryDetailPage() {
         {/* Birds */}
         <div className="flex flex-wrap gap-2 mb-4">
           {story.birds.map((bird) => (
-            <Link key={bird.birdId} href={`/bird/${bird.birdId}`}>
+            <Link key={bird.birdId} href={`/birds/${bird.birdId}`}>
               <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
                 {bird.imageUrl && (
                   <Image

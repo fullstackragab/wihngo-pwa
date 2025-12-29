@@ -155,8 +155,6 @@ export interface SupportHistoryResponse {
 // Wallet linking
 export interface LinkWalletRequest {
   publicKey: string;
-  signature: string;
-  message: string;
 }
 
 export interface LinkedWallet {

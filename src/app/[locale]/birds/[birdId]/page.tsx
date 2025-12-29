@@ -21,7 +21,7 @@ export default function BirdDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const birdId = params.id as string;
+  const birdId = params.birdId as string;
 
   const { data: bird, isLoading, error } = useQuery({
     queryKey: ["bird", birdId],

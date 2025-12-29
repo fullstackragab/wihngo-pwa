@@ -8,6 +8,8 @@ import {
   preflightCheck,
   createSupportIntent,
   submitSupport,
+  checkWalletBalance,
+  linkWallet,
 } from "@/services/support.service";
 import {
   MINIMUM_SOL_FOR_GAS,
@@ -35,6 +37,7 @@ type SupportStep =
   | "connect_wallet"
   | "checking_balance"
   | "insufficient_funds"
+  | "validation_failed"
   | "ready"
   | "creating_intent"
   | "signing"
@@ -108,21 +111,25 @@ function SupportConfirmContent() {
   });
 
   const preflightMutation = useMutation({
-    mutationFn: (walletAddr: string) =>
+    mutationFn: (params: {
+      walletAddr: string;
+      birdAmt: number;
+      wihngoAmt: number;
+    }) =>
       preflightCheck({
         birdId: birdId!,
-        birdAmount,
-        wihngoSupportAmount: wihngoAmount,
-        walletAddress: walletAddr,
+        birdAmount: params.birdAmt,
+        wihngoSupportAmount: params.wihngoAmt,
+        walletAddress: params.walletAddr,
       }),
   });
 
   const createIntentMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (params: { birdAmt: number; wihngoAmt: number }) =>
       createSupportIntent({
         birdId: birdId!,
-        birdAmount,
-        wihngoAmount,
+        birdAmount: params.birdAmt,
+        wihngoAmount: params.wihngoAmt,
       }),
   });
 
@@ -138,12 +145,20 @@ function SupportConfirmContent() {
     }
   }, [isAuthenticated, router]);
 
-  // Auto-advance if wallet is already connected
+  // Auto-advance if wallet is already connected and amounts are valid
   useEffect(() => {
-    if (isConnected && walletAddress && step === "connect_wallet") {
-      checkBalanceAndProceed();
+    // Wait for amounts to be parsed from URL
+    const hasValidAmounts = totalAmount > 0;
+    if (isConnected && walletAddress && step === "connect_wallet" && hasValidAmounts) {
+      // Ensure wallet is linked to backend, then proceed
+      linkWallet(walletAddress)
+        .then(() => checkBalanceAndProceed())
+        .catch((err) => {
+          console.warn("Wallet link failed, proceeding anyway:", err);
+          checkBalanceAndProceed();
+        });
     }
-  }, [isConnected, walletAddress, step]);
+  }, [isConnected, walletAddress, step, totalAmount]);
 
   const checkBalanceAndProceed = async () => {
     if (!walletAddress) return;
@@ -152,35 +167,58 @@ function SupportConfirmContent() {
     setError("");
 
     try {
-      // Use preflight endpoint to check if user can support
-      const data = await preflightMutation.mutateAsync(walletAddress);
-      setPreflightData(data);
+      // First, get on-chain balance directly (more reliable)
+      const onChainBalance = await checkWalletBalance(walletAddress);
 
       setBalanceInfo({
-        solBalance: data.solBalance || 0,
-        usdcBalance: data.usdcBalance || 0,
+        solBalance: onChainBalance.solBalance || 0,
+        usdcBalance: onChainBalance.usdcBalance || 0,
       });
 
-      if (!data.canSupport) {
-        // Backend tells us user can't support
-        if (data.errorCode) {
-          setError(data.message || "Unable to process support");
-        }
+      // Check if user has enough balance
+      const hasEnoughUsdc = onChainBalance.usdcBalance >= totalAmount;
+      const hasEnoughSol = onChainBalance.solBalance >= MINIMUM_SOL_FOR_GAS;
+
+      if (!hasEnoughUsdc || !hasEnoughSol) {
         setStep("insufficient_funds");
-      } else {
-        setStep("ready");
+        return;
       }
-    } catch (err) {
-      console.error("Preflight check error:", err);
-      // If preflight fails, still allow proceeding - will validate on create intent
+
+      // Also run preflight for additional validation (bird exists, etc.)
+      try {
+        const data = await preflightMutation.mutateAsync({
+          walletAddr: walletAddress,
+          birdAmt: birdAmount,
+          wihngoAmt: wihngoAmount,
+        });
+        setPreflightData(data);
+
+        if (!data.canSupport) {
+          setError(data.message || "Unable to process support");
+          setStep("validation_failed");
+          return;
+        }
+      } catch (preflightErr) {
+        // Preflight failed but we have balance, allow proceeding
+        console.warn("Preflight check failed, proceeding with on-chain balance:", preflightErr);
+      }
+
       setStep("ready");
+    } catch (err) {
+      console.error("Balance check error:", err);
+      setError("Failed to check wallet balance. Please try again.");
+      setStep("connect_wallet");
     }
   };
 
   const handleConnectWallet = async () => {
     try {
       setError("");
-      await connect();
+      const publicKey = await connect();
+      if (publicKey) {
+        // Link wallet to user account in backend
+        await linkWallet(publicKey.toBase58());
+      }
       // useEffect will handle the rest when isConnected changes
     } catch (err) {
       console.error("Wallet connection error:", err);
@@ -199,7 +237,10 @@ function SupportConfirmContent() {
       setStep("creating_intent");
 
       // Step 1: Create support intent - backend builds the transaction
-      const intent = await createIntentMutation.mutateAsync();
+      const intent = await createIntentMutation.mutateAsync({
+        birdAmt: birdAmount,
+        wihngoAmt: wihngoAmount,
+      });
       setSupportIntent(intent);
 
       // Step 2: Sign the transaction with Phantom (just sign, don't send)
@@ -256,10 +297,10 @@ function SupportConfirmContent() {
     switch (step) {
       case "connect_wallet":
         return (
-          <>
-            <div className="text-center mb-8">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-purple-100 flex items-center justify-center">
-                <Wallet className="w-10 h-10 text-purple-600" />
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                <Wallet className="w-10 h-10 text-primary" />
               </div>
               <h2 className="text-xl font-bold text-foreground mb-2">
                 Connect Your Wallet
@@ -270,21 +311,21 @@ function SupportConfirmContent() {
             </div>
 
             {!isPhantomInstalled && (
-              <Card variant="outlined" className="mb-6 bg-amber-50 border-amber-200">
+              <Card variant="outlined" padding="md" className="bg-secondary/50 border-secondary">
                 <div className="flex gap-3">
-                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                  <AlertCircle className="w-5 h-5 text-foreground/70 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm text-amber-800 font-medium">
+                    <p className="text-sm text-foreground font-medium">
                       Phantom Wallet Required
                     </p>
-                    <p className="text-sm text-amber-700 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                       Install Phantom to send USDC on Solana.
                     </p>
                     <a
                       href="https://phantom.app/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-purple-600 font-medium mt-2"
+                      className="inline-flex items-center gap-1 text-sm text-primary font-medium mt-2 hover:underline"
                     >
                       Get Phantom <ExternalLink className="w-4 h-4" />
                     </a>
@@ -297,21 +338,20 @@ function SupportConfirmContent() {
               fullWidth
               size="lg"
               onClick={handleConnectWallet}
-              className="bg-purple-600 hover:bg-purple-700"
             >
               <Wallet className="w-5 h-5 mr-2" />
               Connect Phantom Wallet
             </Button>
 
             {error && (
-              <p className="mt-4 text-sm text-destructive text-center">{error}</p>
+              <p className="text-sm text-destructive text-center">{error}</p>
             )}
-          </>
+          </div>
         );
 
       case "checking_balance":
         return (
-          <div className="text-center py-12">
+          <div className="text-center py-8">
             <LoadingSpinner className="mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-foreground mb-2">
               Checking Balance
@@ -324,15 +364,17 @@ function SupportConfirmContent() {
 
       case "insufficient_funds":
         return (
-          <div className="text-center">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">
-              <AlertCircle className="w-10 h-10 text-amber-600" />
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
+                <AlertCircle className="w-10 h-10 text-foreground/70" />
+              </div>
+              <h2 className="text-xl font-bold text-foreground mb-2">
+                Insufficient Balance
+              </h2>
             </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">
-              Insufficient Balance
-            </h2>
 
-            <Card variant="outlined" className="text-left mb-6 mt-4">
+            <Card variant="outlined" padding="md" className="text-left">
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">USDC Balance</span>
@@ -369,7 +411,7 @@ function SupportConfirmContent() {
               </div>
             </Card>
 
-            <p className="text-sm text-muted-foreground mb-6">
+            <p className="text-sm text-muted-foreground text-center">
               You need at least ${totalAmount.toFixed(2)} USDC and ~0.005 SOL for
               transaction fees.
             </p>
@@ -392,7 +434,7 @@ function SupportConfirmContent() {
               <Button
                 variant="ghost"
                 fullWidth
-                onClick={() => router.push(`/bird/${birdId}`)}
+                onClick={() => router.push(`/birds/${birdId}`)}
               >
                 Cancel
               </Button>
@@ -400,10 +442,43 @@ function SupportConfirmContent() {
           </div>
         );
 
+      case "validation_failed":
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
+                <Heart className="w-10 h-10 text-muted-foreground" />
+              </div>
+              <h2 className="text-xl font-bold text-foreground mb-2">
+                Support Temporarily Unavailable
+              </h2>
+              <p className="text-muted-foreground">
+                {error || "This bird is not currently able to receive support. Please check back later or explore other birds."}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <Button
+                fullWidth
+                onClick={() => router.push("/birds")}
+              >
+                Explore Other Birds
+              </Button>
+              <Button
+                variant="outline"
+                fullWidth
+                onClick={() => router.push(`/birds/${birdId}`)}
+              >
+                View {recipientName}&apos;s Profile
+              </Button>
+            </div>
+          </div>
+        );
+
       case "ready":
         return (
-          <>
-            <div className="text-center mb-6">
+          <div className="space-y-6">
+            <div className="text-center">
               <h2 className="text-xl font-bold text-foreground mb-2">
                 Confirm Support
               </h2>
@@ -413,10 +488,10 @@ function SupportConfirmContent() {
             </div>
 
             {walletAddress && (
-              <Card variant="outlined" className="mb-6 bg-muted/50">
+              <Card variant="outlined" padding="md" className="bg-muted/50">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                    <Wallet className="w-4 h-4 text-purple-600" />
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Wallet className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-muted-foreground">Connected Wallet</p>
@@ -425,7 +500,7 @@ function SupportConfirmContent() {
                     </p>
                   </div>
                   {balanceInfo && (
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <p className="text-xs text-muted-foreground">USDC Balance</p>
                       <p className="text-sm font-medium text-foreground">
                         ${balanceInfo.usdcBalance.toFixed(2)}
@@ -436,7 +511,7 @@ function SupportConfirmContent() {
               </Card>
             )}
 
-            <Card variant="outlined" className="mb-6">
+            <Card variant="outlined" padding="md">
               <div className="space-y-3">
                 {birdAmount > 0 && (
                   <div className="flex justify-between items-center">
@@ -460,7 +535,7 @@ function SupportConfirmContent() {
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Network Fee</span>
-                  <span className="text-green-600">Minimal (~$0.001)</span>
+                  <span className="text-support-green">Minimal (~$0.001)</span>
                 </div>
               </div>
             </Card>
@@ -469,21 +544,20 @@ function SupportConfirmContent() {
               fullWidth
               size="lg"
               onClick={handleConfirmSupport}
-              className="bg-primary hover:bg-primary/90"
             >
               <Heart className="w-5 h-5 mr-2" />
               Sign & Send ${totalAmount.toFixed(2)}
             </Button>
 
             {error && (
-              <p className="mt-4 text-sm text-destructive text-center">{error}</p>
+              <p className="text-sm text-destructive text-center">{error}</p>
             )}
-          </>
+          </div>
         );
 
       case "creating_intent":
         return (
-          <div className="text-center py-12">
+          <div className="text-center py-8">
             <LoadingSpinner className="mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-foreground mb-2">
               Preparing Support
@@ -494,7 +568,7 @@ function SupportConfirmContent() {
 
       case "signing":
         return (
-          <div className="text-center py-12">
+          <div className="text-center py-8">
             <LoadingSpinner className="mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-foreground mb-2">
               Approve Transaction
@@ -507,7 +581,7 @@ function SupportConfirmContent() {
 
       case "submitting":
         return (
-          <div className="text-center py-12">
+          <div className="text-center py-8">
             <LoadingSpinner className="mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-foreground mb-2">
               Processing
@@ -520,17 +594,19 @@ function SupportConfirmContent() {
 
       case "success":
         return (
-          <div className="text-center">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle2 className="w-10 h-10 text-green-600" />
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                <CheckCircle2 className="w-10 h-10 text-primary" />
+              </div>
+              <h2 className="text-xl font-bold text-foreground mb-2">Thank You!</h2>
+              <p className="text-muted-foreground">
+                Your support for {recipientName} was successful!
+              </p>
             </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">Thank You!</h2>
-            <p className="text-muted-foreground mb-2">
-              Your support for {recipientName} was successful!
-            </p>
 
-            <Card variant="outlined" className="text-left mb-6 mt-4">
-              <div className="space-y-2">
+            <Card variant="outlined" padding="md" className="text-left">
+              <div className="space-y-3">
                 {birdAmount > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">To {recipientName}</span>
@@ -543,19 +619,19 @@ function SupportConfirmContent() {
                     <span className="font-medium">${wihngoAmount.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between pt-2 border-t border-border">
+                <div className="flex justify-between pt-3 border-t border-border">
                   <span className="font-medium">Total</span>
                   <span className="font-medium text-primary">
                     ${totalAmount.toFixed(2)}
                   </span>
                 </div>
                 {solanaSignature && (
-                  <div className="pt-2 border-t border-border">
+                  <div className="pt-3 border-t border-border">
                     <a
                       href={`https://solscan.io/tx/${solanaSignature}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-purple-600 hover:underline"
+                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                     >
                       View on Solscan <ExternalLink className="w-3 h-3" />
                     </a>
@@ -565,7 +641,7 @@ function SupportConfirmContent() {
             </Card>
 
             <div className="space-y-3">
-              <Button fullWidth onClick={() => router.push(isWihngoOnly ? "/" : `/bird/${birdId}`)}>
+              <Button fullWidth onClick={() => router.push(isWihngoOnly ? "/" : `/birds/${birdId}`)}>
                 <Heart className="w-4 h-4 mr-2" />
                 {isWihngoOnly ? "Back to Home" : `Back to ${recipientName}`}
               </Button>
@@ -578,15 +654,17 @@ function SupportConfirmContent() {
 
       case "error":
         return (
-          <div className="text-center">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-              <XCircle className="w-10 h-10 text-red-600" />
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
+                <XCircle className="w-10 h-10 text-destructive" />
+              </div>
+              <h2 className="text-xl font-bold text-foreground mb-2">Support Failed</h2>
+              <p className="text-destructive">{error}</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Please try again or contact us if the issue persists.
+              </p>
             </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">Support Failed</h2>
-            <p className="text-destructive mb-2">{error}</p>
-            <p className="text-sm text-muted-foreground mb-6">
-              Please try again or contact us if the issue persists.
-            </p>
 
             <div className="space-y-3">
               <Button fullWidth onClick={() => setStep("ready")}>
@@ -595,7 +673,7 @@ function SupportConfirmContent() {
               <Button
                 variant="outline"
                 fullWidth
-                onClick={() => router.push(`/bird/${birdId}`)}
+                onClick={() => router.push(`/birds/${birdId}`)}
               >
                 Cancel
               </Button>
@@ -607,8 +685,8 @@ function SupportConfirmContent() {
 
   return (
     <div className="min-h-screen-safe bg-background">
-      <header className="px-4 py-4 pt-safe border-b border-border">
-        <div className="flex items-center gap-4">
+      <header className="border-b border-border pt-safe">
+        <div className="px-4 py-4 max-w-lg mx-auto flex items-center gap-4">
           <button
             onClick={() => router.back()}
             className="p-2 -ml-2"
@@ -624,9 +702,9 @@ function SupportConfirmContent() {
         </div>
       </header>
 
-      <main className="px-4 py-6 max-w-lg mx-auto">
+      <main className="px-4 py-6 pb-safe max-w-lg mx-auto">
         {!["success", "error"].includes(step) && (
-          <Card variant="outlined" className="flex items-center gap-4 mb-8">
+          <Card variant="outlined" padding="md" className="flex items-center gap-4 mb-6">
             <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-muted flex-shrink-0">
               {isWihngoOnly ? (
                 <div className="w-full h-full flex items-center justify-center bg-primary/10">
@@ -645,13 +723,13 @@ function SupportConfirmContent() {
                 </div>
               )}
             </div>
-            <div className="flex-1">
-              <h2 className="font-semibold text-foreground">{recipientName}</h2>
+            <div className="flex-1 min-w-0">
+              <h2 className="font-semibold text-foreground truncate">{recipientName}</h2>
               <p className="text-sm text-muted-foreground">
                 {isWihngoOnly ? "Platform Support" : bird?.species || "Bird"}
               </p>
             </div>
-            <div className="text-right">
+            <div className="text-right flex-shrink-0">
               <p className="font-bold text-primary">${totalAmount.toFixed(2)}</p>
               <p className="text-xs text-muted-foreground">USDC</p>
             </div>

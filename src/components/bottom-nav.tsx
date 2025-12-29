@@ -19,7 +19,7 @@ export function BottomNav() {
     if (pathname === "/") return "home";
     // Check for support pages first (birds/.../support)
     if (pathname.includes("/support")) return "support";
-    if (pathname.startsWith("/birds") || pathname.startsWith("/bird/")) return "explore";
+    if (pathname.startsWith("/birds")) return "explore";
     if (pathname.startsWith("/support-wihngo")) return "support";
     if (pathname.startsWith("/profile")) return "profile";
     return "home";

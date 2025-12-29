@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { usePhantom } from "@/hooks/use-phantom";
+import { linkWallet } from "@/services/wallet.service";
 import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
@@ -40,7 +41,11 @@ export default function ProfilePage() {
     setIsConnecting(true);
     setConnectError(null);
     try {
-      await connect();
+      const publicKey = await connect();
+      if (publicKey) {
+        // Link wallet to user account in backend
+        await linkWallet(publicKey.toBase58());
+      }
     } catch (err) {
       console.error("Wallet connection error:", err);
       setConnectError(err instanceof Error ? err.message : "Failed to connect wallet");

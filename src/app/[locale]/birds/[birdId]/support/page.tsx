@@ -7,8 +7,9 @@ import { getBird } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Card } from "@/components/ui/card";
 import { LoadingScreen } from "@/components/ui/loading";
-import { Check, Info } from "lucide-react";
+import { Check, Info, Heart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -61,6 +62,61 @@ function SupportContent() {
 
   if (isLoading) {
     return <LoadingScreen />;
+  }
+
+  // Check if bird can receive support
+  if (bird && (bird.canSupport === false || bird.isMemorial)) {
+    return (
+      <div className="min-h-screen-safe flex flex-col items-center justify-center px-6 py-8">
+        <div className="max-w-md w-full text-center space-y-6">
+          <div className="w-20 h-20 mx-auto rounded-full bg-muted flex items-center justify-center">
+            <Heart className="w-10 h-10 text-muted-foreground" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-medium">
+              {bird.isMemorial ? "In Loving Memory" : "Support Unavailable"}
+            </h1>
+            <p className="text-muted-foreground">
+              {bird.supportUnavailableMessage ||
+                (bird.isMemorial
+                  ? `${bird.name} is remembered with love. This bird is no longer accepting support.`
+                  : `${bird.name} is not currently accepting support. Please check back later.`
+                )
+              }
+            </p>
+          </div>
+
+          {bird.imageUrl && (
+            <Card variant="outlined" padding="none" className="overflow-hidden mx-auto max-w-xs">
+              <Image
+                src={bird.imageUrl}
+                alt={bird.name || "Bird"}
+                width={300}
+                height={200}
+                className="w-full h-48 object-cover"
+              />
+              <div className="p-4">
+                <h3 className="font-medium">{bird.name}</h3>
+                <p className="text-sm text-muted-foreground">{bird.species}</p>
+              </div>
+            </Card>
+          )}
+
+          <div className="space-y-3 pt-4">
+            <Link href={`/birds/${birdId}`}>
+              <Button variant="outline" fullWidth>
+                View {bird.name}&apos;s Profile
+              </Button>
+            </Link>
+            <Link href="/birds">
+              <Button fullWidth>
+                Explore Other Birds
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const handleAmountSelect = (amount: number) => {

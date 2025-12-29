@@ -38,6 +38,7 @@ export type Bird = {
   activityStatus?: BirdActivityStatus;
   lastSeenText?: string;
   canSupport?: boolean;
+  supportEnabled?: boolean;
   supportUnavailableMessage?: string;
 };
 
@@ -80,6 +81,7 @@ export type CreateBirdDto = {
 
 export type UpdateBirdDto = Partial<Omit<CreateBirdDto, 'walletAddress'>> & {
   walletAddress?: string; // Optional on update
+  supportEnabled?: boolean; // Toggle to accept/reject support
 };
 
 export type SupportBirdDto = {
