@@ -15,6 +15,7 @@ import { ArrowLeft, Heart, MapPin, Flower2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 export default function BirdDetailPage() {
   const params = useParams();
@@ -22,6 +23,7 @@ export default function BirdDetailPage() {
   const queryClient = useQueryClient();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const birdId = params.birdId as string;
+  const t = useTranslations("birds");
 
   const { data: bird, isLoading, error } = useQuery({
     queryKey: ["bird", birdId],
@@ -66,8 +68,8 @@ export default function BirdDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-destructive mb-4">Failed to load bird</p>
-          <Button onClick={() => router.back()}>Go Back</Button>
+          <p className="text-destructive mb-4">{t("loadFailed")}</p>
+          <Button onClick={() => router.back()}>{t("goBack")}</Button>
         </div>
       </div>
     );
@@ -114,7 +116,7 @@ export default function BirdDetailPage() {
           {bird.isMemorial && (
             <Link href={`/birds/${bird.birdId}/memorial`}>
               <div className="absolute top-4 right-4 bg-foreground/70 text-card px-3 py-1 rounded-full text-sm hover:bg-foreground/80 transition-colors cursor-pointer">
-                In Memory
+                {t("inMemory")}
               </div>
             </Link>
           )}
@@ -132,7 +134,7 @@ export default function BirdDetailPage() {
               <h1 className="mb-2">{bird.name}</h1>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <MapPin className="w-4 h-4" />
-                <span>{bird.location || "Safe haven needed"}</span>
+                <span>{bird.location || t("safeHavenNeeded")}</span>
               </div>
             </div>
             <button
@@ -153,7 +155,7 @@ export default function BirdDetailPage() {
           {/* Story */}
           {(bird.tagline || bird.description) && (
             <div className="space-y-2">
-              <h3 className="text-foreground/90">Story</h3>
+              <h3 className="text-foreground/90">{t("story")}</h3>
               <p className="text-foreground/70 leading-relaxed">
                 {bird.description || bird.tagline}
               </p>
@@ -163,7 +165,7 @@ export default function BirdDetailPage() {
           {/* Needs/Info */}
           {bird.species && (
             <div className="space-y-2">
-              <h3 className="text-foreground/90">Species</h3>
+              <h3 className="text-foreground/90">{t("species")}</h3>
               <p className="text-foreground/70">{bird.species}</p>
             </div>
           )}
@@ -174,7 +176,7 @@ export default function BirdDetailPage() {
               <Link href={`/birds/${bird.birdId}/support`}>
                 <Button size="lg" className="w-full rounded-full gap-2">
                   <Heart className="w-4 h-4" />
-                  Support {bird.name}
+                  {t("supportBird", { name: bird.name })}
                 </Button>
               </Link>
             </div>
@@ -186,7 +188,7 @@ export default function BirdDetailPage() {
               <Link href={`/birds/${bird.birdId}/memorial`}>
                 <Button size="lg" variant="outline" className="w-full rounded-full gap-2">
                   <Flower2 className="w-4 h-4" />
-                  View Tributes & Memorial
+                  {t("viewTributes")}
                 </Button>
               </Link>
             </div>
@@ -203,7 +205,7 @@ export default function BirdDetailPage() {
           {/* Reassurance */}
           {bird.canSupport !== false && !bird.isMemorial && (
             <p className="text-center text-sm text-muted-foreground">
-              100% of your support goes directly to help this bird
+              {t("support100Percent")}
             </p>
           )}
 
@@ -222,14 +224,14 @@ export default function BirdDetailPage() {
 
           {/* Stories Section */}
           <div className="pt-4">
-            <h2 className="font-medium text-foreground mb-4">Stories</h2>
+            <h2 className="font-medium text-foreground mb-4">{t("stories")}</h2>
             {storiesLoading ? (
               <div className="flex justify-center py-8">
                 <LoadingSpinner />
               </div>
             ) : !storiesData?.items || storiesData.items.length === 0 ? (
               <div className="bg-card rounded-2xl border border-border/50 text-center py-8">
-                <p className="text-muted-foreground">No stories yet</p>
+                <p className="text-muted-foreground">{t("noStoriesYet")}</p>
               </div>
             ) : (
               <div className="space-y-4">

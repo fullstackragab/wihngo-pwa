@@ -172,7 +172,10 @@
     "walletConnected": "Wallet Connected",
     "noWalletConnected": "No wallet connected",
     "connect": "Connect",
-    "getPhantom": "Get Phantom"
+    "getPhantom": "Get Phantom",
+    "lovedBirds": "Loved Birds",
+    "noLovedBirdsYet": "No loved birds yet",
+    "tapHeartToSave": "Tap the heart on birds you love to save them here"
   },
   "myBirds": {
     "title": "My Birds",
@@ -302,7 +305,15 @@
     "noBirdsYet": "No birds yet",
     "tryDifferentSearch": "Try a different search term",
     "checkBackSoon": "Check back soon for new birds to support",
-    "loadMore": "Load more"
+    "loadMore": "Load more",
+    "story": "Story",
+    "species": "Species",
+    "inMemory": "In Memory",
+    "safeHavenNeeded": "Safe haven needed",
+    "viewTributes": "View Tributes & Memorial",
+    "stories": "Stories",
+    "noStoriesYet": "No stories yet",
+    "goBack": "Go Back"
   },
   "auth": {
     "login": "Sign In",

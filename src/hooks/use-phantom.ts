@@ -115,8 +115,54 @@ export function usePhantom(): UsePhantomResult {
       return null;
     };
 
+    // Check for Phantom deep link callback (mobile flow)
+    const handleDeepLinkCallback = () => {
+      if (typeof window === "undefined") return false;
+
+      const url = new URL(window.location.href);
+      const phantomPublicKey = url.searchParams.get("phantom_encryption_public_key");
+      const errorCode = url.searchParams.get("errorCode");
+
+      // If there's an error from Phantom, log it
+      if (errorCode) {
+        console.error("Phantom connect error:", errorCode, url.searchParams.get("errorMessage"));
+        // Clean up the URL
+        window.history.replaceState({}, "", url.pathname);
+        return false;
+      }
+
+      // If we got a public key back from Phantom deep link
+      if (phantomPublicKey) {
+        try {
+          // The phantom_encryption_public_key is for encryption, not the wallet address
+          // For the connect flow, Phantom returns data in an encrypted format
+          // However, for basic connect without encryption, we can check for the public key in data
+          const data = url.searchParams.get("data");
+          const nonce = url.searchParams.get("nonce");
+
+          if (data && nonce) {
+            // For now, store that we initiated a connection
+            // The actual public key would need to be decrypted
+            // For simpler implementation, we'll rely on the SDK to handle this
+            console.log("Phantom returned from deep link, checking SDK state...");
+          }
+
+          // Clean up the URL parameters
+          window.history.replaceState({}, "", url.pathname);
+          return true;
+        } catch (err) {
+          console.error("Failed to parse Phantom callback:", err);
+        }
+      }
+
+      return false;
+    };
+
     const initializeProvider = async () => {
       setIsLoading(true);
+
+      // Check for deep link callback first
+      handleDeepLinkCallback();
 
       // On mobile, we can't detect if Phantom app is installed
       // But we can always try to use it via deep links / SDK
@@ -221,11 +267,7 @@ export function usePhantom(): UsePhantomResult {
         }
       } catch (err) {
         console.warn("SDK connect failed, trying alternatives:", err);
-        // Fall through to other methods only on desktop
-        if (isMobile) {
-          // On mobile, SDK should handle everything - don't fall through to manual deep links
-          throw err;
-        }
+        // Fall through to other methods
       }
     }
 
@@ -243,7 +285,24 @@ export function usePhantom(): UsePhantomResult {
       }
     }
 
-    // No provider available - open Phantom website
+    // On mobile, use Phantom deep link to open the app
+    if (isMobile) {
+      const currentUrl = window.location.href;
+      const appUrl = encodeURIComponent(window.location.origin);
+      const redirectUrl = encodeURIComponent(currentUrl);
+
+      // Use Phantom Universal Link for mobile
+      // This will open the Phantom app if installed, or redirect to app store
+      const phantomConnectUrl = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&redirect_link=${redirectUrl}&cluster=mainnet-beta`;
+
+      // Use window.location.href for better mobile compatibility
+      window.location.href = phantomConnectUrl;
+
+      // Return null - the app will redirect back after connection
+      return null;
+    }
+
+    // Desktop without extension - open Phantom website to download
     window.open("https://phantom.app/", "_blank");
     throw new Error("Phantom wallet not installed. Please install Phantom to continue.");
   }, [provider, solanaSDK, isMobile]);

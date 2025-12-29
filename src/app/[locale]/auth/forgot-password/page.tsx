@@ -7,6 +7,7 @@ import { forgotPassword } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, CheckCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -14,6 +15,8 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const t = useTranslations("auth");
+  const tCommon = useTranslations("common");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +38,7 @@ export default function ForgotPasswordPage() {
       <div className="min-h-screen-safe flex flex-col">
         <header className="px-6 py-4 pt-safe">
           <button onClick={() => router.back()} className="text-muted-foreground hover:text-foreground transition-colors">
-            ← Back
+            ← {tCommon("back")}
           </button>
         </header>
 
@@ -46,16 +49,16 @@ export default function ForgotPasswordPage() {
                 <CheckCircle className="w-8 h-8 text-success" />
               </div>
               <div>
-                <h1 className="text-2xl font-medium text-foreground">Check your email</h1>
+                <h1 className="text-2xl font-medium text-foreground">{t("checkYourEmail")}</h1>
                 <p className="text-muted-foreground mt-2">
-                  We've sent a password reset link to <span className="font-medium text-foreground">{email}</span>
+                  {t("resetLinkSent")} <span className="font-medium text-foreground">{email}</span>
                 </p>
               </div>
             </div>
 
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
-                Didn't receive the email? Check your spam folder or try again.
+                {t("didntReceiveEmail")}
               </p>
               <Button
                 variant="outline"
@@ -63,11 +66,11 @@ export default function ForgotPasswordPage() {
                 size="lg"
                 onClick={() => setIsSuccess(false)}
               >
-                Try again
+                {t("tryAgain")}
               </Button>
               <Link href="/auth/login" className="block">
                 <Button variant="ghost" fullWidth size="lg">
-                  Back to Sign In
+                  {t("backToSignIn")}
                 </Button>
               </Link>
             </div>
@@ -81,7 +84,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen-safe flex flex-col">
       <header className="px-6 py-4 pt-safe">
         <button onClick={() => router.back()} className="text-muted-foreground hover:text-foreground transition-colors">
-          ← Back
+          ← {tCommon("back")}
         </button>
       </header>
 
@@ -92,9 +95,9 @@ export default function ForgotPasswordPage() {
               <Mail className="w-8 h-8 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-medium text-foreground">Forgot password?</h1>
+              <h1 className="text-2xl font-medium text-foreground">{t("forgotPasswordTitle")}</h1>
               <p className="text-muted-foreground mt-1">
-                No worries, we'll send you reset instructions
+                {t("forgotPasswordDesc")}
               </p>
             </div>
           </div>
@@ -102,8 +105,8 @@ export default function ForgotPasswordPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               type="email"
-              label="Email"
-              placeholder="Enter your email"
+              label={t("email")}
+              placeholder={t("emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -117,13 +120,13 @@ export default function ForgotPasswordPage() {
             )}
 
             <Button type="submit" fullWidth size="lg" isLoading={isLoading}>
-              Send Reset Link
+              {t("sendResetLink")}
             </Button>
           </form>
 
           <div className="text-center">
             <Link href="/auth/login" className="text-sm text-primary">
-              Back to Sign In
+              {t("backToSignIn")}
             </Link>
           </div>
         </div>

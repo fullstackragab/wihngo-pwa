@@ -172,7 +172,10 @@
     "walletConnected": "المحفظة متصلة",
     "noWalletConnected": "لا توجد محفظة متصلة",
     "connect": "اتصل",
-    "getPhantom": "احصل على Phantom"
+    "getPhantom": "احصل على Phantom",
+    "lovedBirds": "الطيور المفضلة",
+    "noLovedBirdsYet": "لا توجد طيور مفضلة بعد",
+    "tapHeartToSave": "اضغط على القلب في الطيور التي تحبها لحفظها هنا"
   },
   "myBirds": {
     "title": "طيوري",
@@ -302,7 +305,15 @@
     "noBirdsYet": "لا توجد طيور بعد",
     "tryDifferentSearch": "جرّب كلمة بحث مختلفة",
     "checkBackSoon": "عُد قريبًا لدعم طيور جديدة",
-    "loadMore": "تحميل المزيد"
+    "loadMore": "تحميل المزيد",
+    "story": "القصة",
+    "species": "النوع",
+    "inMemory": "في الذاكرة",
+    "safeHavenNeeded": "بحاجة لملاذ آمن",
+    "viewTributes": "عرض التحيات والذكرى",
+    "stories": "القصص",
+    "noStoriesYet": "لا توجد قصص بعد",
+    "goBack": "العودة"
   },
   "auth": {
     "login": "تسجيل الدخول",

@@ -9,10 +9,12 @@ import { BottomNav } from "@/components/bottom-nav";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { ArrowLeft, Heart } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export default function LovedBirdsPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const t = useTranslations("profile");
 
   const { data: birds, isLoading } = useQuery({
     queryKey: ["lovedBirds", user?.userId],
@@ -38,7 +40,7 @@ export default function LovedBirdsPage() {
           <button onClick={() => router.back()} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6 text-gray-600" />
           </button>
-          <h1 className="text-xl font-bold text-gray-900">Loved Birds</h1>
+          <h1 className="text-xl font-bold text-gray-900">{t("lovedBirds")}</h1>
         </div>
       </header>
 
@@ -52,10 +54,10 @@ export default function LovedBirdsPage() {
           <div className="text-center py-12">
             <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No loved birds yet
+              {t("noLovedBirdsYet")}
             </h3>
             <p className="text-gray-500">
-              Tap the heart on birds you love to save them here
+              {t("tapHeartToSave")}
             </p>
           </div>
         ) : (

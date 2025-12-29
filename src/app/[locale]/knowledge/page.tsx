@@ -9,6 +9,7 @@ import { motion } from "motion/react";
 import { guideCategories } from "@/data/guides";
 import { species } from "@/data/species";
 import { guides } from "@/data/guides";
+import { useTranslations } from "next-intl";
 
 const iconMap: Record<string, React.ElementType> = {
   Utensils,
@@ -21,25 +22,26 @@ const iconMap: Record<string, React.ElementType> = {
 
 export default function KnowledgeHubPage() {
   const router = useRouter();
+  const t = useTranslations("knowledge");
 
   const sections = [
     {
-      title: "Guides",
-      description: "Practical knowledge for bird care",
+      title: t("guides"),
+      description: t("guidesDesc"),
       href: "/knowledge/guides",
       icon: BookOpen,
       count: guides.length,
     },
     {
-      title: "Species",
-      description: "Learn about different birds",
+      title: t("species"),
+      description: t("speciesDesc"),
       href: "/knowledge/species",
       icon: Bird,
       count: species.length,
     },
     {
-      title: "Myths & Mistakes",
-      description: "Common misconceptions debunked",
+      title: t("myths"),
+      description: t("mythsDesc"),
       href: "/knowledge/myths",
       icon: AlertTriangle,
       count: null,
@@ -48,7 +50,7 @@ export default function KnowledgeHubPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <TopBar title="Knowledge Hub" onBack={() => router.back()} />
+      <TopBar title={t("title")} onBack={() => router.back()} />
 
       <div className="max-w-lg mx-auto p-4 space-y-6">
         {/* Intro */}
@@ -61,7 +63,7 @@ export default function KnowledgeHubPage() {
             <BookOpen className="w-8 h-8 text-primary" />
           </div>
           <p className="text-muted-foreground leading-relaxed">
-            Trusted reference for bird care. We prefer accuracy and care over speed.
+            {t("subtitle")}
           </p>
         </motion.div>
 
@@ -110,7 +112,7 @@ export default function KnowledgeHubPage() {
           className="pt-4"
         >
           <h2 className="text-sm font-medium text-muted-foreground mb-3 px-1">
-            Guide Categories
+            {t("guideCategories")}
           </h2>
           <div className="grid grid-cols-2 gap-3">
             {Object.entries(guideCategories).map(([key, category]) => {
@@ -137,8 +139,7 @@ export default function KnowledgeHubPage() {
         >
           <Card className="p-5 bg-accent/30 border-accent">
             <p className="text-sm text-foreground/80 leading-relaxed text-center">
-              Our guides are being carefully prepared by people who care about
-              getting it right. We prioritize accuracy over speed.
+              {t("beingPreparedNote")}
             </p>
           </Card>
         </motion.div>
