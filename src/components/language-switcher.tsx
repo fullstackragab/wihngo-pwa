@@ -17,6 +17,10 @@ export function LanguageSwitcher({ variant = "buttons" }: LanguageSwitcherProps)
   const switchLocale = (newLocale: Locale) => {
     if (newLocale === currentLocale) return;
 
+    // Set the NEXT_LOCALE cookie to persist the language preference
+    // This cookie is read by next-intl middleware to remember the user's choice
+    document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+
     // Replace the locale in the pathname
     const segments = pathname.split("/");
     // The locale is typically the first segment after the initial slash
