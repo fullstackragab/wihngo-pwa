@@ -84,6 +84,10 @@ export async function getSupportedBirds(userId: string): Promise<Bird[]> {
 }
 
 // Memorial endpoints
+export async function markAsMemorial(birdId: string): Promise<Bird> {
+  return apiHelper.post<Bird>(`birds/${birdId}/memorial`, {});
+}
+
 export async function getMemorial(birdId: string): Promise<Memorial> {
   return publicGet<Memorial>(`birds/${birdId}/memorial`);
 }

@@ -142,6 +142,40 @@ The frontend now has a "Create Bird" page at `/birds/create` that allows users t
 
 ---
 
+### 3. Mark Bird as Memorial
+**Endpoint:** `POST /api/birds/{birdId}/memorial`
+
+**Purpose:** Mark a bird as a memorial (permanent, cannot be undone).
+
+**Request:**
+- No body required (empty object `{}`)
+- Bird must be owned by the authenticated user
+- Bird must not already be a memorial
+
+**Response:**
+```json
+{
+  "birdId": "uuid",
+  "name": "string",
+  "isMemorial": true,
+  "canSupport": false,
+  ... // full Bird object
+}
+```
+
+**Side Effects:**
+- Set `isMemorial = true` on the bird
+- Set `canSupport = false` on the bird
+- Send memorial notification email to all past supporters
+- Create memorial record with date
+
+**Error Cases:**
+- `403 Forbidden` - User doesn't own this bird
+- `400 Bad Request` - Bird is already a memorial
+- `404 Not Found` - Bird doesn't exist
+
+---
+
 ## Questions for Backend
 
 1. **Image Upload Endpoint:** Does `POST /api/birds/upload-image` exist? If not, what endpoint should the frontend use for bird image uploads?

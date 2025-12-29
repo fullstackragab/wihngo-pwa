@@ -26,6 +26,7 @@ import {
   FileText,
   Users,
   Globe,
+  Flower2,
 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import Link from "next/link";
@@ -211,6 +212,18 @@ export default function ProfilePage() {
                 <h4 className="mb-1">My Birds</h4>
                 <p className="text-sm text-muted-foreground">
                   Manage birds you&apos;re caring for
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/profile/memorial">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Flower2 className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">Create Memorial</h4>
+                <p className="text-sm text-muted-foreground">
+                  Honor a bird&apos;s memory
                 </p>
               </div>
             </div>
