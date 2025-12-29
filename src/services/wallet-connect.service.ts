@@ -74,6 +74,11 @@ export async function processWalletCallback(
 const INTENT_STATE_KEY = "wallet_connect_state";
 const INTENT_MESSAGE_KEY = "wallet_connect_message";
 const DAPP_SECRET_KEY = "wallet_connect_dapp_secret";
+const DAPP_PUBLIC_KEY = "wallet_connect_dapp_public";
+const PHANTOM_PUBLIC_KEY = "wallet_connect_phantom_public";
+const PHANTOM_SESSION_KEY = "wallet_connect_phantom_session";
+const WALLET_PUBLIC_KEY = "wallet_connect_wallet_public";
+const CONNECT_STEP_KEY = "wallet_connect_step"; // "connect" | "sign"
 
 export function storeIntentLocally(intent: CreateIntentResponse, dappSecretKey?: string): void {
   if (typeof localStorage === "undefined") return;
@@ -103,6 +108,72 @@ export function clearStoredIntent(): void {
   localStorage.removeItem(INTENT_STATE_KEY);
   localStorage.removeItem(INTENT_MESSAGE_KEY);
   localStorage.removeItem(DAPP_SECRET_KEY);
+  localStorage.removeItem(DAPP_PUBLIC_KEY);
+  localStorage.removeItem(PHANTOM_PUBLIC_KEY);
+  localStorage.removeItem(PHANTOM_SESSION_KEY);
+  localStorage.removeItem(WALLET_PUBLIC_KEY);
+  localStorage.removeItem(CONNECT_STEP_KEY);
+}
+
+// Store dapp keypair for session
+export function storeDappKeypair(publicKey: string, secretKey: string): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(DAPP_PUBLIC_KEY, publicKey);
+  localStorage.setItem(DAPP_SECRET_KEY, secretKey);
+}
+
+export function getStoredDappPublicKey(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem(DAPP_PUBLIC_KEY);
+}
+
+export function getStoredDappSecretKey(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem(DAPP_SECRET_KEY);
+}
+
+// Store Phantom encryption public key (returned from connect)
+export function storePhantomPublicKey(publicKey: string): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(PHANTOM_PUBLIC_KEY, publicKey);
+}
+
+export function getStoredPhantomPublicKey(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem(PHANTOM_PUBLIC_KEY);
+}
+
+// Store session from connect response
+export function storePhantomSession(session: string): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(PHANTOM_SESSION_KEY, session);
+}
+
+export function getStoredPhantomSession(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem(PHANTOM_SESSION_KEY);
+}
+
+// Store wallet public key from connect response
+export function storeWalletPublicKey(publicKey: string): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(WALLET_PUBLIC_KEY, publicKey);
+}
+
+export function getStoredWalletPublicKey(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem(WALLET_PUBLIC_KEY);
+}
+
+// Track which step we're on in the flow
+export function setConnectStep(step: "connect" | "sign"): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(CONNECT_STEP_KEY, step);
+}
+
+export function getConnectStep(): "connect" | "sign" | null {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem(CONNECT_STEP_KEY) as "connect" | "sign" | null;
 }
 
 // ============================================
@@ -113,26 +184,65 @@ import nacl from "tweetnacl";
 import bs58 from "bs58";
 
 /**
- * Build Phantom signMessage deep link URL
- * Uses signMessage instead of connect because it returns both publicKey AND signature
+ * Build Phantom connect deep link URL
+ * First step: establishes session and returns publicKey
  */
-export function buildPhantomSignMessageUrl(
-  message: string,
+export function buildPhantomConnectUrl(
   redirectUrl: string,
   dappPublicKey: string
 ): string {
   const appUrl = typeof window !== "undefined" ? window.location.origin : "";
 
-  // Encode message as base58
-  const messageBytes = new TextEncoder().encode(message);
-  const messageBase58 = bs58.encode(messageBytes);
-
   const params = new URLSearchParams({
     app_url: appUrl,
     dapp_encryption_public_key: dappPublicKey,
     redirect_link: redirectUrl,
-    message: messageBase58,
     cluster: "mainnet-beta",
+  });
+
+  return `https://phantom.app/ul/v1/connect?${params.toString()}`;
+}
+
+/**
+ * Build Phantom signMessage deep link URL
+ * Second step: requires session from connect, returns signature
+ */
+export function buildPhantomSignMessageUrl(
+  message: string,
+  redirectUrl: string,
+  dappPublicKey: string,
+  session: string,
+  nonce: string
+): string {
+  // Create the payload to encrypt
+  const payload = {
+    message: bs58.encode(new TextEncoder().encode(message)),
+    session,
+  };
+
+  // Encrypt the payload
+  const dappSecretKey = getStoredDappSecretKey();
+  if (!dappSecretKey) {
+    throw new Error("No dapp secret key for encryption");
+  }
+
+  const sharedSecret = nacl.box.before(
+    bs58.decode(getStoredPhantomPublicKey() || ""),
+    bs58.decode(dappSecretKey)
+  );
+
+  const nonceBytes = nacl.randomBytes(24);
+  const encryptedPayload = nacl.box.after(
+    new TextEncoder().encode(JSON.stringify(payload)),
+    nonceBytes,
+    sharedSecret
+  );
+
+  const params = new URLSearchParams({
+    dapp_encryption_public_key: dappPublicKey,
+    redirect_link: redirectUrl,
+    nonce: bs58.encode(nonceBytes),
+    payload: bs58.encode(encryptedPayload),
   });
 
   return `https://phantom.app/ul/v1/signMessage?${params.toString()}`;
@@ -150,8 +260,90 @@ export function generateDappKeypair(): { publicKey: string; secretKey: string } 
 }
 
 /**
+ * Decrypt Phantom connect response
+ * Returns { publicKey, session } or null if decryption fails
+ */
+export function decryptConnectResponse(
+  phantomEncryptionPublicKey: string,
+  encryptedData: string,
+  nonce: string,
+  dappSecretKey: string
+): { publicKey: string; session: string } | null {
+  try {
+    const dappSecret = bs58.decode(dappSecretKey);
+    const phantomPubKey = bs58.decode(phantomEncryptionPublicKey);
+    const data = bs58.decode(encryptedData);
+    const nonceBytes = bs58.decode(nonce);
+
+    const sharedSecret = nacl.box.before(phantomPubKey, dappSecret);
+    const decrypted = nacl.box.open.after(data, nonceBytes, sharedSecret);
+
+    if (!decrypted) {
+      console.error("Failed to decrypt Phantom connect response");
+      return null;
+    }
+
+    const response = JSON.parse(new TextDecoder().decode(decrypted));
+
+    // connect response contains public_key and session
+    if (response.public_key && response.session) {
+      return {
+        publicKey: response.public_key,
+        session: response.session,
+      };
+    }
+
+    console.error("Missing public_key or session in connect response");
+    return null;
+  } catch (err) {
+    console.error("Failed to decrypt Phantom connect response:", err);
+    return null;
+  }
+}
+
+/**
  * Decrypt Phantom signMessage response
- * Returns { publicKey, signature } or null if decryption fails
+ * Returns { signature } or null if decryption fails
+ */
+export function decryptSignMessageResponse(
+  phantomEncryptionPublicKey: string,
+  encryptedData: string,
+  nonce: string,
+  dappSecretKey: string
+): { signature: string } | null {
+  try {
+    const dappSecret = bs58.decode(dappSecretKey);
+    const phantomPubKey = bs58.decode(phantomEncryptionPublicKey);
+    const data = bs58.decode(encryptedData);
+    const nonceBytes = bs58.decode(nonce);
+
+    const sharedSecret = nacl.box.before(phantomPubKey, dappSecret);
+    const decrypted = nacl.box.open.after(data, nonceBytes, sharedSecret);
+
+    if (!decrypted) {
+      console.error("Failed to decrypt Phantom signMessage response");
+      return null;
+    }
+
+    const response = JSON.parse(new TextDecoder().decode(decrypted));
+
+    // signMessage response contains signature
+    if (response.signature) {
+      return {
+        signature: response.signature,
+      };
+    }
+
+    console.error("Missing signature in signMessage response");
+    return null;
+  } catch (err) {
+    console.error("Failed to decrypt Phantom signMessage response:", err);
+    return null;
+  }
+}
+
+/**
+ * @deprecated Use decryptConnectResponse or decryptSignMessageResponse instead
  */
 export function decryptPhantomResponse(
   phantomEncryptionPublicKey: string,

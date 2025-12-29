@@ -7,12 +7,25 @@ import { detectPlatform, isMobileDevice } from "@/lib/phantom/platform";
 import {
   createWalletConnectIntent,
   processWalletCallback,
+  buildPhantomConnectUrl,
   buildPhantomSignMessageUrl,
   generateDappKeypair,
-  decryptPhantomResponse,
+  decryptConnectResponse,
+  decryptSignMessageResponse,
   storeIntentLocally,
   getStoredIntent,
   clearStoredIntent,
+  storeDappKeypair,
+  getStoredDappPublicKey,
+  getStoredDappSecretKey,
+  storePhantomPublicKey,
+  getStoredPhantomPublicKey,
+  storePhantomSession,
+  getStoredPhantomSession,
+  storeWalletPublicKey,
+  getStoredWalletPublicKey,
+  setConnectStep,
+  getConnectStep,
 } from "@/services/wallet-connect.service";
 
 // Try to import the SDK hooks
@@ -121,7 +134,7 @@ export function usePhantom(): UsePhantomResult {
     // SDK not in context
   }
 
-  // Handle Phantom deep link callback (mobile signMessage flow)
+  // Handle Phantom deep link callback (mobile two-step flow: connect -> signMessage)
   useEffect(() => {
     const handleCallback = async () => {
       if (typeof window === "undefined") return;
@@ -140,45 +153,123 @@ export function usePhantom(): UsePhantomResult {
         return;
       }
 
-      // Handle signMessage response
-      if (phantomPubKey && encryptedData && nonce) {
-        const storedIntent = getStoredIntent();
+      // No callback params - nothing to process
+      if (!phantomPubKey || !encryptedData || !nonce) {
+        return;
+      }
 
-        if (!storedIntent?.dappSecretKey) {
-          console.error("No stored dapp secret key for decryption");
+      const dappSecretKey = getStoredDappSecretKey();
+      if (!dappSecretKey) {
+        console.error("No stored dapp secret key for decryption");
+        cleanPhantomParams();
+        return;
+      }
+
+      const currentStep = getConnectStep();
+      console.log("Processing Phantom callback, step:", currentStep);
+
+      // Step 1: Handle connect response
+      if (currentStep === "connect") {
+        const connectResult = decryptConnectResponse(
+          phantomPubKey,
+          encryptedData,
+          nonce,
+          dappSecretKey
+        );
+
+        if (!connectResult) {
+          console.error("Failed to decrypt connect response");
+          clearStoredIntent();
           cleanPhantomParams();
           return;
         }
 
-        // Decrypt the response
-        const decrypted = decryptPhantomResponse(
+        console.log("Connect successful, wallet:", connectResult.publicKey);
+
+        // Store session data for signMessage step
+        storePhantomPublicKey(phantomPubKey);
+        storePhantomSession(connectResult.session);
+        storeWalletPublicKey(connectResult.publicKey);
+        setConnectStep("sign");
+
+        // Clean URL params before redirecting
+        cleanPhantomParams();
+
+        // Get stored intent for the message
+        const storedIntent = getStoredIntent();
+        if (!storedIntent?.message) {
+          console.error("No stored message for signing");
+          clearStoredIntent();
+          return;
+        }
+
+        // Build and redirect to signMessage
+        const dappPublicKey = getStoredDappPublicKey();
+        if (!dappPublicKey) {
+          console.error("No stored dapp public key");
+          clearStoredIntent();
+          return;
+        }
+
+        const redirectUrl = window.location.href.split("?")[0];
+        const signMessageUrl = buildPhantomSignMessageUrl(
+          storedIntent.message,
+          redirectUrl,
+          dappPublicKey,
+          connectResult.session,
+          nonce
+        );
+
+        console.log("Redirecting to signMessage...");
+        window.location.href = signMessageUrl;
+        return;
+      }
+
+      // Step 2: Handle signMessage response
+      if (currentStep === "sign") {
+        const signResult = decryptSignMessageResponse(
           phantomPubKey,
           encryptedData,
           nonce,
-          storedIntent.dappSecretKey
+          dappSecretKey
         );
 
-        if (decrypted) {
-          console.log("Phantom signMessage response decrypted successfully");
+        if (!signResult) {
+          console.error("Failed to decrypt signMessage response");
+          clearStoredIntent();
+          cleanPhantomParams();
+          return;
+        }
 
-          try {
-            // Send to backend callback
-            const result = await processWalletCallback({
-              state: storedIntent.state,
-              publicKey: decrypted.publicKey,
-              signature: decrypted.signature,
-            });
+        console.log("SignMessage successful");
 
-            if (result.success && result.walletAddress) {
-              const walletPubKey = new PublicKey(result.walletAddress);
-              setPublicKey(walletPubKey);
-              setIsConnected(true);
-              setConnectionMethod("deeplink");
-              console.log("Wallet connected:", result.walletAddress);
-            }
-          } catch (err) {
-            console.error("Callback failed:", err);
+        const storedIntent = getStoredIntent();
+        const walletPublicKey = getStoredWalletPublicKey();
+
+        if (!storedIntent?.state || !walletPublicKey) {
+          console.error("Missing state or wallet public key");
+          clearStoredIntent();
+          cleanPhantomParams();
+          return;
+        }
+
+        try {
+          // Send to backend callback
+          const result = await processWalletCallback({
+            state: storedIntent.state,
+            publicKey: walletPublicKey,
+            signature: signResult.signature,
+          });
+
+          if (result.success && result.walletAddress) {
+            const walletPubKey = new PublicKey(result.walletAddress);
+            setPublicKey(walletPubKey);
+            setIsConnected(true);
+            setConnectionMethod("deeplink");
+            console.log("Wallet connected:", result.walletAddress);
           }
+        } catch (err) {
+          console.error("Callback failed:", err);
         }
 
         clearStoredIntent();
@@ -328,7 +419,7 @@ export function usePhantom(): UsePhantomResult {
       }
     }
 
-    // Mobile deep link flow (signMessage)
+    // Mobile deep link flow (two-step: connect -> signMessage)
     if (isMobile) {
       try {
         // Create intent
@@ -339,18 +430,20 @@ export function usePhantom(): UsePhantomResult {
         const dappKeypair = generateDappKeypair();
 
         // Store for callback processing
-        storeIntentLocally(intent, dappKeypair.secretKey);
+        storeIntentLocally(intent);
+        storeDappKeypair(dappKeypair.publicKey, dappKeypair.secretKey);
+        setConnectStep("connect"); // Start with connect step
 
         // Build redirect URL (current page)
         const redirectUrl = window.location.href.split("?")[0]; // Remove existing params
 
-        // Build Phantom signMessage URL
-        const phantomUrl = buildPhantomSignMessageUrl(
-          intent.message,
+        // Build Phantom connect URL (first step)
+        const phantomUrl = buildPhantomConnectUrl(
           redirectUrl,
           dappKeypair.publicKey
         );
 
+        console.log("Redirecting to Phantom connect...");
         // Redirect to Phantom
         window.location.href = phantomUrl;
         return null;
