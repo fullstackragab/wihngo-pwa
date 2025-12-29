@@ -118,6 +118,13 @@ export function usePhantom(): UsePhantomResult {
     const initializeProvider = async () => {
       setIsLoading(true);
 
+      // On mobile, we can't detect if Phantom app is installed
+      // But we can always try to use it via deep links / SDK
+      // So we mark it as "available" on mobile
+      if (isMobile) {
+        setIsPhantomInstalled(true);
+      }
+
       // Check for SDK connection first (handles both desktop and mobile)
       if (sdkState?.isConnected && solanaSDK) {
         try {
@@ -135,12 +142,7 @@ export function usePhantom(): UsePhantomResult {
         }
       }
 
-      // On mobile, SDK might still be loading - mark as installed if SDK is available
-      if (isMobile && solanaSDK) {
-        setIsPhantomInstalled(true);
-      }
-
-      // Check for browser extension
+      // Check for browser extension (desktop)
       const phantomProvider = getProvider();
       setProvider(phantomProvider);
       if (phantomProvider) {
