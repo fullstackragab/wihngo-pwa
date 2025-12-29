@@ -6,13 +6,16 @@ import bs58 from "bs58";
 import { detectPlatform, isMobileDevice } from "@/lib/phantom/platform";
 import {
   createWalletConnectIntent,
-  processCallback,
-  buildPhantomConnectUrl,
+  processWalletCallback,
+  buildPhantomSignMessageUrl,
+  generateDappKeypair,
+  decryptPhantomResponse,
   storeIntentLocally,
+  getStoredIntent,
   clearStoredIntent,
 } from "@/services/wallet-connect.service";
 
-// Try to import the SDK hooks - they may not be available in all contexts
+// Try to import the SDK hooks
 let useSolanaSDK: (() => { solana: SolanaSDK }) | undefined;
 let usePhantomSDK: (() => PhantomSDKState) | undefined;
 
@@ -21,7 +24,7 @@ try {
   useSolanaSDK = sdk.useSolana;
   usePhantomSDK = sdk.usePhantom;
 } catch {
-  // SDK not available, will use fallback
+  // SDK not available
 }
 
 interface SolanaSDK {
@@ -36,9 +39,7 @@ interface SolanaSDK {
 interface PhantomSDKState {
   isConnected: boolean;
   isLoading: boolean;
-  user?: {
-    addresses: string[];
-  };
+  user?: { addresses: string[] };
 }
 
 interface PhantomProvider {
@@ -48,9 +49,7 @@ interface PhantomProvider {
   connect: () => Promise<{ publicKey: PublicKey }>;
   disconnect: () => Promise<void>;
   signTransaction: (transaction: Transaction) => Promise<Transaction>;
-  signAndSendTransaction: (
-    transaction: Transaction
-  ) => Promise<{ signature: string }>;
+  signAndSendTransaction: (transaction: Transaction) => Promise<{ signature: string }>;
   signMessage: (message: Uint8Array) => Promise<{ signature: Uint8Array }>;
   on: (event: string, callback: (...args: unknown[]) => void) => void;
   off: (event: string, callback: (...args: unknown[]) => void) => void;
@@ -58,9 +57,7 @@ interface PhantomProvider {
 
 declare global {
   interface Window {
-    phantom?: {
-      solana?: PhantomProvider;
-    };
+    phantom?: { solana?: PhantomProvider };
     solana?: PhantomProvider;
   }
 }
@@ -87,17 +84,17 @@ function cleanPhantomParams() {
   if (typeof window === "undefined") return;
 
   const url = new URL(window.location.href);
-  const hasPhantomParams = url.searchParams.has("phantom_encryption_public_key") ||
-                           url.searchParams.has("errorCode") ||
-                           url.searchParams.has("state");
+  const phantomParams = ["phantom_encryption_public_key", "data", "nonce", "errorCode", "errorMessage"];
+  let hasParams = false;
 
-  if (hasPhantomParams) {
-    url.searchParams.delete("phantom_encryption_public_key");
-    url.searchParams.delete("data");
-    url.searchParams.delete("nonce");
-    url.searchParams.delete("errorCode");
-    url.searchParams.delete("errorMessage");
-    url.searchParams.delete("state");
+  for (const param of phantomParams) {
+    if (url.searchParams.has(param)) {
+      url.searchParams.delete(param);
+      hasParams = true;
+    }
+  }
+
+  if (hasParams) {
     window.history.replaceState({}, "", url.pathname + url.search);
   }
 }
@@ -113,23 +110,18 @@ export function usePhantom(): UsePhantomResult {
   const platform = useMemo(() => detectPlatform(), []);
   const isMobile = useMemo(() => isMobileDevice(), []);
 
-  // Try to use SDK hooks if available
+  // SDK hooks
   let sdkState: PhantomSDKState | undefined;
   let solanaSDK: SolanaSDK | undefined;
 
   try {
-    if (usePhantomSDK) {
-      sdkState = usePhantomSDK();
-    }
-    if (useSolanaSDK) {
-      const result = useSolanaSDK();
-      solanaSDK = result.solana;
-    }
+    if (usePhantomSDK) sdkState = usePhantomSDK();
+    if (useSolanaSDK) solanaSDK = useSolanaSDK().solana;
   } catch {
-    // SDK not in context, use fallback
+    // SDK not in context
   }
 
-  // Handle Phantom deep link callback (mobile flow)
+  // Handle Phantom deep link callback (mobile signMessage flow)
   useEffect(() => {
     const handleCallback = async () => {
       if (typeof window === "undefined") return;
@@ -137,40 +129,56 @@ export function usePhantom(): UsePhantomResult {
       const url = new URL(window.location.href);
       const phantomPubKey = url.searchParams.get("phantom_encryption_public_key");
       const errorCode = url.searchParams.get("errorCode");
-      const data = url.searchParams.get("data");
+      const encryptedData = url.searchParams.get("data");
       const nonce = url.searchParams.get("nonce");
-      const state = url.searchParams.get("state");
 
-      // Handle Phantom error
+      // Handle error
       if (errorCode) {
-        console.error("Phantom connect error:", errorCode, url.searchParams.get("errorMessage"));
+        console.error("Phantom error:", errorCode, url.searchParams.get("errorMessage"));
         clearStoredIntent();
         cleanPhantomParams();
         return;
       }
 
-      // Handle successful Phantom callback
-      if (phantomPubKey && data && nonce && state) {
-        console.log("Processing Phantom callback with state:", state);
+      // Handle signMessage response
+      if (phantomPubKey && encryptedData && nonce) {
+        const storedIntent = getStoredIntent();
 
-        try {
-          // Send to backend for decryption (works in any browser)
-          const result = await processCallback({
-            state,
-            phantomEncryptionPublicKey: phantomPubKey,
-            data,
-            nonce,
-          });
+        if (!storedIntent?.dappSecretKey) {
+          console.error("No stored dapp secret key for decryption");
+          cleanPhantomParams();
+          return;
+        }
 
-          if (result.success && result.walletAddress) {
-            const walletPubKey = new PublicKey(result.walletAddress);
-            setPublicKey(walletPubKey);
-            setIsConnected(true);
-            setConnectionMethod("deeplink");
-            console.log("Wallet connected via backend:", result.walletAddress);
+        // Decrypt the response
+        const decrypted = decryptPhantomResponse(
+          phantomPubKey,
+          encryptedData,
+          nonce,
+          storedIntent.dappSecretKey
+        );
+
+        if (decrypted) {
+          console.log("Phantom signMessage response decrypted successfully");
+
+          try {
+            // Send to backend callback
+            const result = await processWalletCallback({
+              state: storedIntent.state,
+              publicKey: decrypted.publicKey,
+              signature: decrypted.signature,
+            });
+
+            if (result.success && result.walletAddress) {
+              const walletPubKey = new PublicKey(result.walletAddress);
+              setPublicKey(walletPubKey);
+              setIsConnected(true);
+              setConnectionMethod("deeplink");
+              console.log("Wallet connected:", result.walletAddress);
+            }
+          } catch (err) {
+            console.error("Callback failed:", err);
           }
-        } catch (err) {
-          console.error("Failed to process Phantom callback:", err);
         }
 
         clearStoredIntent();
@@ -193,12 +201,11 @@ export function usePhantom(): UsePhantomResult {
     const initializeProvider = async () => {
       setIsLoading(true);
 
-      // On mobile, we can't detect if Phantom app is installed
       if (isMobile) {
         setIsPhantomInstalled(true);
       }
 
-      // Check for SDK connection first
+      // Check SDK first
       if (sdkState?.isConnected && solanaSDK) {
         try {
           const pubKeyStr = await solanaSDK.getPublicKey();
@@ -211,58 +218,39 @@ export function usePhantom(): UsePhantomResult {
             return;
           }
         } catch {
-          // Fall through to extension check
+          // Fall through
         }
       }
 
-      // Check for browser extension (desktop)
+      // Check browser extension
       const phantomProvider = getProvider();
       setProvider(phantomProvider);
       if (phantomProvider) {
         setIsPhantomInstalled(true);
-      }
-
-      if (phantomProvider?.publicKey) {
-        setPublicKey(phantomProvider.publicKey);
-        setIsConnected(true);
-        setConnectionMethod("extension");
+        if (phantomProvider.publicKey) {
+          setPublicKey(phantomProvider.publicKey);
+          setIsConnected(true);
+          setConnectionMethod("extension");
+        }
       }
 
       setIsLoading(false);
     };
 
     initializeProvider();
-
-    // Re-check after a delay
-    const timeout = setTimeout(initializeProvider, 100);
-    const timeout2 = setTimeout(initializeProvider, 500);
-    return () => {
-      clearTimeout(timeout);
-      clearTimeout(timeout2);
-    };
+    const t1 = setTimeout(initializeProvider, 100);
+    const t2 = setTimeout(initializeProvider, 500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [sdkState?.isConnected, sdkState?.isLoading, isMobile]);
 
-  // Listen for provider events
+  // Provider events
   useEffect(() => {
     if (!provider) return;
 
-    const handleConnect = (pubKey: PublicKey) => {
-      setPublicKey(pubKey);
-      setIsConnected(true);
-    };
-
-    const handleDisconnect = () => {
-      setPublicKey(null);
-      setIsConnected(false);
-    };
-
-    const handleAccountChanged = (pubKey: PublicKey | null) => {
-      if (pubKey) {
-        setPublicKey(pubKey);
-        setIsConnected(true);
-      } else {
-        handleDisconnect();
-      }
+    const handleConnect = (pk: PublicKey) => { setPublicKey(pk); setIsConnected(true); };
+    const handleDisconnect = () => { setPublicKey(null); setIsConnected(false); };
+    const handleAccountChanged = (pk: PublicKey | null) => {
+      pk ? handleConnect(pk) : handleDisconnect();
     };
 
     provider.on("connect", handleConnect as (...args: unknown[]) => void);
@@ -277,70 +265,109 @@ export function usePhantom(): UsePhantomResult {
   }, [provider]);
 
   const connect = useCallback(async (): Promise<PublicKey | null> => {
-    // Try SDK first
+    // SDK flow
     if (solanaSDK) {
       try {
         const pubKeyStr = await solanaSDK.getPublicKey();
         if (pubKeyStr) {
           const pubKey = new PublicKey(pubKeyStr);
-          setPublicKey(pubKey);
-          setIsConnected(true);
-          setConnectionMethod("sdk");
-          return pubKey;
+
+          // Now sign the message for backend verification
+          const intent = await createWalletConnectIntent();
+          const messageBytes = new TextEncoder().encode(intent.message);
+          const signResult = await solanaSDK.signMessage(messageBytes);
+          const signatureBase58 = bs58.encode(signResult.signature);
+
+          // Send to backend
+          const result = await processWalletCallback({
+            state: intent.state,
+            publicKey: pubKeyStr,
+            signature: signatureBase58,
+          });
+
+          if (result.success) {
+            setPublicKey(pubKey);
+            setIsConnected(true);
+            setConnectionMethod("sdk");
+            return pubKey;
+          }
         }
       } catch (err) {
-        console.warn("SDK connect failed, trying alternatives:", err);
+        console.warn("SDK connect failed:", err);
       }
     }
 
-    // Try browser extension (desktop only)
+    // Extension flow (desktop)
     if (provider && !isMobile) {
       try {
         const response = await provider.connect();
-        setPublicKey(response.publicKey);
-        setIsConnected(true);
-        setConnectionMethod("extension");
-        return response.publicKey;
+        const pubKey = response.publicKey;
+
+        // Sign message for backend verification
+        const intent = await createWalletConnectIntent();
+        const messageBytes = new TextEncoder().encode(intent.message);
+        const signResult = await provider.signMessage(messageBytes);
+        const signatureBase58 = bs58.encode(signResult.signature);
+
+        // Send to backend
+        const result = await processWalletCallback({
+          state: intent.state,
+          publicKey: pubKey.toBase58(),
+          signature: signatureBase58,
+        });
+
+        if (result.success) {
+          setPublicKey(pubKey);
+          setIsConnected(true);
+          setConnectionMethod("extension");
+          return pubKey;
+        }
       } catch (error) {
-        console.error("Failed to connect via extension:", error);
+        console.error("Extension connect failed:", error);
         throw error;
       }
     }
 
-    // On mobile, use backend-managed deep link flow
+    // Mobile deep link flow (signMessage)
     if (isMobile) {
       try {
-        // Create intent via backend (stores keypair server-side)
-        const intent = await createWalletConnectIntent("connect");
-        console.log("Created wallet connect intent:", intent.intentId);
+        // Create intent
+        const intent = await createWalletConnectIntent();
+        console.log("Created wallet connect intent");
 
-        // Store intent ID locally for recovery
-        storeIntentLocally(intent);
+        // Generate encryption keypair
+        const dappKeypair = generateDappKeypair();
 
-        // Build Phantom URL and redirect
-        const phantomUrl = buildPhantomConnectUrl(intent);
+        // Store for callback processing
+        storeIntentLocally(intent, dappKeypair.secretKey);
+
+        // Build redirect URL (current page)
+        const redirectUrl = window.location.href.split("?")[0]; // Remove existing params
+
+        // Build Phantom signMessage URL
+        const phantomUrl = buildPhantomSignMessageUrl(
+          intent.message,
+          redirectUrl,
+          dappKeypair.publicKey
+        );
+
+        // Redirect to Phantom
         window.location.href = phantomUrl;
-
-        // Return null - page will reload after Phantom redirect
         return null;
       } catch (err) {
-        console.error("Failed to create wallet connect intent:", err);
+        console.error("Mobile connect failed:", err);
         throw new Error("Failed to initiate wallet connection");
       }
     }
 
-    // Desktop without extension - open Phantom website
+    // Desktop without extension
     window.open("https://phantom.app/", "_blank");
-    throw new Error("Phantom wallet not installed. Please install Phantom to continue.");
+    throw new Error("Phantom wallet not installed.");
   }, [provider, solanaSDK, isMobile]);
 
   const disconnect = useCallback(async () => {
     if (provider) {
-      try {
-        await provider.disconnect();
-      } catch (error) {
-        console.error("Failed to disconnect:", error);
-      }
+      try { await provider.disconnect(); } catch {}
     }
     setPublicKey(null);
     setIsConnected(false);
@@ -349,41 +376,23 @@ export function usePhantom(): UsePhantomResult {
 
   const signTransaction = useCallback(
     async (serializedTransaction: string): Promise<string> => {
-      if (!isConnected) {
-        throw new Error("Wallet not connected");
-      }
+      if (!isConnected) throw new Error("Wallet not connected");
 
-      // Try SDK first
       if (solanaSDK) {
         try {
-          const transactionBuffer = Buffer.from(serializedTransaction, "base64");
-          const transaction = Transaction.from(transactionBuffer);
-          const signedTx = await solanaSDK.signTransaction(transaction);
-
-          if (signedTx instanceof Transaction) {
-            const signedBuffer = signedTx.serialize({
-              requireAllSignatures: false,
-              verifySignatures: false,
-            });
-            return Buffer.from(signedBuffer).toString("base64");
+          const tx = Transaction.from(Buffer.from(serializedTransaction, "base64"));
+          const signed = await solanaSDK.signTransaction(tx);
+          if (signed instanceof Transaction) {
+            return Buffer.from(signed.serialize({ requireAllSignatures: false, verifySignatures: false })).toString("base64");
           }
-          return Buffer.from(signedTx.serialize()).toString("base64");
-        } catch (error) {
-          console.error("SDK sign failed:", error);
-        }
+          return Buffer.from(signed.serialize()).toString("base64");
+        } catch {}
       }
 
-      // Try extension
       if (provider) {
-        const transactionBuffer = Buffer.from(serializedTransaction, "base64");
-        const transaction = Transaction.from(transactionBuffer);
-        const signedTransaction = await provider.signTransaction(transaction);
-
-        const signedBuffer = signedTransaction.serialize({
-          requireAllSignatures: false,
-          verifySignatures: false,
-        });
-        return Buffer.from(signedBuffer).toString("base64");
+        const tx = Transaction.from(Buffer.from(serializedTransaction, "base64"));
+        const signed = await provider.signTransaction(tx);
+        return Buffer.from(signed.serialize({ requireAllSignatures: false, verifySignatures: false })).toString("base64");
       }
 
       throw new Error("No signing method available");
@@ -393,17 +402,13 @@ export function usePhantom(): UsePhantomResult {
 
   const signAndSendTransaction = useCallback(
     async (transaction: Transaction | VersionedTransaction): Promise<string> => {
-      if (!isConnected) {
-        throw new Error("Wallet not connected");
-      }
+      if (!isConnected) throw new Error("Wallet not connected");
 
       if (solanaSDK) {
         try {
           const result = await solanaSDK.signAndSendTransaction(transaction);
           return result.signature;
-        } catch (error) {
-          console.error("SDK signAndSend failed:", error);
-        }
+        } catch {}
       }
 
       if (provider && transaction instanceof Transaction) {
@@ -418,23 +423,19 @@ export function usePhantom(): UsePhantomResult {
 
   const signMessage = useCallback(
     async (message: string): Promise<string> => {
-      if (!isConnected) {
-        throw new Error("Wallet not connected");
-      }
+      if (!isConnected) throw new Error("Wallet not connected");
 
-      const encodedMessage = new TextEncoder().encode(message);
+      const encoded = new TextEncoder().encode(message);
 
       if (solanaSDK) {
         try {
-          const response = await solanaSDK.signMessage(encodedMessage);
+          const response = await solanaSDK.signMessage(encoded);
           return bs58.encode(response.signature);
-        } catch {
-          // Fall through
-        }
+        } catch {}
       }
 
       if (provider) {
-        const response = await provider.signMessage(encodedMessage);
+        const response = await provider.signMessage(encoded);
         return bs58.encode(response.signature);
       }
 

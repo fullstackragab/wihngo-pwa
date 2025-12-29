@@ -1,100 +1,49 @@
 import { apiHelper, publicFetch, saveAuthToken } from "./api-helper";
 
 // ============================================
-// TYPES
+// TYPES (Matching Backend API)
 // ============================================
 
-export interface WalletConnectIntent {
-  id: string;
-  state: string;
-  nonce: string;
-  callbackUrl: string;
-  dappPublicKey: string;
-  status: "pending" | "completed" | "expired" | "cancelled";
-  purpose?: string;
-  createdAt: string;
-  expiresAt: string;
+export interface CreateIntentResponse {
+  state: string;      // Opaque token to identify this intent
+  nonce: string;      // Nonce for the signing request
+  message: string;    // Message to be signed by the wallet (base58 or utf8)
 }
 
-export interface CreateIntentResponse {
-  intentId: string;
-  state: string;
-  nonce: string;
-  callbackUrl: string;
-  dappPublicKey: string;
-  expiresAt: string;
+export interface CallbackRequest {
+  state: string;           // State token from intent
+  publicKey: string;       // Base58 Solana public key
+  signature: string;       // Base58 Ed25519 signature of the message
 }
 
 export interface CallbackResponse {
   success: boolean;
   walletAddress: string;
-  accessToken: string;
-  refreshToken: string;
+  accessToken?: string;
+  refreshToken?: string;
   message?: string;
 }
 
-export interface CallbackInfoResponse {
-  callbackUrl: string;
-  appUrl: string;
-}
-
-export interface PendingIntentResponse {
-  hasPending: boolean;
-  intent?: WalletConnectIntent;
-}
-
 // ============================================
-// AUTHENTICATED ENDPOINTS
+// API ENDPOINTS
 // ============================================
 
 /**
  * Create a wallet connect intent
- * Stores keypair server-side for cross-browser decryption
+ * Returns state token and message to be signed
  */
-export async function createWalletConnectIntent(
-  purpose: string = "connect"
-): Promise<CreateIntentResponse> {
-  return apiHelper.post<CreateIntentResponse>("wallet-connect/intents", {
-    purpose,
-  });
+export async function createWalletConnectIntent(): Promise<CreateIntentResponse> {
+  return apiHelper.post<CreateIntentResponse>("wallet-connect/intents", {});
 }
 
 /**
- * Get intent status by ID
+ * Process wallet callback - PUBLIC endpoint
+ * Verifies the signature and links wallet to user
+ * Returns new auth tokens for session recovery
  */
-export async function getIntentStatus(intentId: string): Promise<WalletConnectIntent> {
-  return apiHelper.get<WalletConnectIntent>(`wallet-connect/intents/${intentId}`);
-}
-
-/**
- * Check for pending wallet connect intents (recovery)
- */
-export async function getPendingIntent(): Promise<PendingIntentResponse> {
-  return apiHelper.get<PendingIntentResponse>("wallet-connect/pending");
-}
-
-/**
- * Cancel a pending intent
- */
-export async function cancelIntent(intentId: string): Promise<void> {
-  return apiHelper.post(`wallet-connect/intents/${intentId}/cancel`, {});
-}
-
-// ============================================
-// PUBLIC ENDPOINTS (No Auth Required)
-// ============================================
-
-/**
- * Process Phantom callback - PUBLIC endpoint
- * Called from any browser after Phantom redirects back
- * Returns new tokens for session recovery
- */
-export async function processCallback(params: {
-  state: string;
-  phantomEncryptionPublicKey: string;
-  data: string;
-  nonce: string;
-}): Promise<CallbackResponse> {
+export async function processWalletCallback(
+  params: CallbackRequest
+): Promise<CallbackResponse> {
   const response = await publicFetch("wallet-connect/callback", {
     method: "POST",
     body: JSON.stringify(params),
@@ -118,70 +67,126 @@ export async function processCallback(params: {
   return result;
 }
 
-/**
- * Get callback URL info - PUBLIC endpoint
- */
-export async function getCallbackInfo(): Promise<CallbackInfoResponse> {
-  const response = await publicFetch("wallet-connect/callback-info", {
-    method: "GET",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to get callback info");
-  }
-
-  return response.json();
-}
-
-// ============================================
-// HELPER: Build Phantom Connect URL
-// ============================================
-
-/**
- * Build the Phantom universal link for wallet connection
- */
-export function buildPhantomConnectUrl(intent: CreateIntentResponse): string {
-  const appUrl = typeof window !== "undefined" ? window.location.origin : "";
-
-  // Build redirect URL with state parameter
-  const redirectUrl = new URL(intent.callbackUrl);
-  redirectUrl.searchParams.set("state", intent.state);
-
-  const params = new URLSearchParams({
-    app_url: appUrl,
-    dapp_encryption_public_key: intent.dappPublicKey,
-    redirect_link: redirectUrl.toString(),
-    cluster: "mainnet-beta",
-  });
-
-  return `https://phantom.app/ul/v1/connect?${params.toString()}`;
-}
-
 // ============================================
 // LOCAL STORAGE HELPERS
 // ============================================
 
-const INTENT_ID_KEY = "wallet_connect_intent_id";
 const INTENT_STATE_KEY = "wallet_connect_state";
+const INTENT_MESSAGE_KEY = "wallet_connect_message";
+const DAPP_SECRET_KEY = "wallet_connect_dapp_secret";
 
-export function storeIntentLocally(intent: CreateIntentResponse): void {
+export function storeIntentLocally(intent: CreateIntentResponse, dappSecretKey?: string): void {
   if (typeof localStorage === "undefined") return;
-  localStorage.setItem(INTENT_ID_KEY, intent.intentId);
   localStorage.setItem(INTENT_STATE_KEY, intent.state);
+  localStorage.setItem(INTENT_MESSAGE_KEY, intent.message);
+  if (dappSecretKey) {
+    localStorage.setItem(DAPP_SECRET_KEY, dappSecretKey);
+  }
+}
+
+export function getStoredIntent(): { state: string; message: string; dappSecretKey?: string } | null {
+  if (typeof localStorage === "undefined") return null;
+  const state = localStorage.getItem(INTENT_STATE_KEY);
+  const message = localStorage.getItem(INTENT_MESSAGE_KEY);
+  const dappSecretKey = localStorage.getItem(DAPP_SECRET_KEY);
+  if (!state || !message) return null;
+  return { state, message, dappSecretKey: dappSecretKey || undefined };
 }
 
 export function getStoredIntentId(): string | null {
-  if (typeof localStorage === "undefined") return null;
-  return localStorage.getItem(INTENT_ID_KEY);
-}
-
-export function getStoredState(): string | null {
   if (typeof localStorage === "undefined") return null;
   return localStorage.getItem(INTENT_STATE_KEY);
 }
 
 export function clearStoredIntent(): void {
   if (typeof localStorage === "undefined") return;
-  localStorage.removeItem(INTENT_ID_KEY);
   localStorage.removeItem(INTENT_STATE_KEY);
+  localStorage.removeItem(INTENT_MESSAGE_KEY);
+  localStorage.removeItem(DAPP_SECRET_KEY);
+}
+
+// ============================================
+// PHANTOM DEEP LINK HELPERS
+// ============================================
+
+import nacl from "tweetnacl";
+import bs58 from "bs58";
+
+/**
+ * Build Phantom signMessage deep link URL
+ * Uses signMessage instead of connect because it returns both publicKey AND signature
+ */
+export function buildPhantomSignMessageUrl(
+  message: string,
+  redirectUrl: string,
+  dappPublicKey: string
+): string {
+  const appUrl = typeof window !== "undefined" ? window.location.origin : "";
+
+  // Encode message as base58
+  const messageBytes = new TextEncoder().encode(message);
+  const messageBase58 = bs58.encode(messageBytes);
+
+  const params = new URLSearchParams({
+    app_url: appUrl,
+    dapp_encryption_public_key: dappPublicKey,
+    redirect_link: redirectUrl,
+    message: messageBase58,
+    cluster: "mainnet-beta",
+  });
+
+  return `https://phantom.app/ul/v1/signMessage?${params.toString()}`;
+}
+
+/**
+ * Generate encryption keypair for Phantom deep link communication
+ */
+export function generateDappKeypair(): { publicKey: string; secretKey: string } {
+  const keypair = nacl.box.keyPair();
+  return {
+    publicKey: bs58.encode(keypair.publicKey),
+    secretKey: bs58.encode(keypair.secretKey),
+  };
+}
+
+/**
+ * Decrypt Phantom signMessage response
+ * Returns { publicKey, signature } or null if decryption fails
+ */
+export function decryptPhantomResponse(
+  phantomEncryptionPublicKey: string,
+  encryptedData: string,
+  nonce: string,
+  dappSecretKey: string
+): { publicKey: string; signature: string } | null {
+  try {
+    const dappSecret = bs58.decode(dappSecretKey);
+    const phantomPubKey = bs58.decode(phantomEncryptionPublicKey);
+    const data = bs58.decode(encryptedData);
+    const nonceBytes = bs58.decode(nonce);
+
+    const sharedSecret = nacl.box.before(phantomPubKey, dappSecret);
+    const decrypted = nacl.box.open.after(data, nonceBytes, sharedSecret);
+
+    if (!decrypted) {
+      console.error("Failed to decrypt Phantom response");
+      return null;
+    }
+
+    const response = JSON.parse(new TextDecoder().decode(decrypted));
+
+    // signMessage response contains public_key and signature
+    if (response.public_key && response.signature) {
+      return {
+        publicKey: response.public_key,
+        signature: response.signature,
+      };
+    }
+
+    console.error("Missing public_key or signature in response");
+    return null;
+  } catch (err) {
+    console.error("Failed to decrypt Phantom response:", err);
+    return null;
+  }
 }
