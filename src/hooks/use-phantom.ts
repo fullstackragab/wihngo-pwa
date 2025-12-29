@@ -3,7 +3,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
 import bs58 from "bs58";
+import nacl from "tweetnacl";
 import { detectPlatform, isMobileDevice } from "@/lib/phantom/platform";
+
+// Storage keys for mobile deep link flow
+const PHANTOM_CONNECT_PENDING_KEY = "phantom_connect_pending";
+const PHANTOM_DAPP_KEYPAIR_KEY = "phantom_dapp_keypair";
 
 // Try to import the SDK hooks - they may not be available in all contexts
 let useSolanaSDK: (() => { solana: SolanaSDK }) | undefined;
@@ -116,53 +121,92 @@ export function usePhantom(): UsePhantomResult {
     };
 
     // Check for Phantom deep link callback (mobile flow)
-    const handleDeepLinkCallback = () => {
-      if (typeof window === "undefined") return false;
+    const handleDeepLinkCallback = (): PublicKey | null => {
+      if (typeof window === "undefined") return null;
 
       const url = new URL(window.location.href);
-      const phantomPublicKey = url.searchParams.get("phantom_encryption_public_key");
+      const phantomEncryptionPubKey = url.searchParams.get("phantom_encryption_public_key");
       const errorCode = url.searchParams.get("errorCode");
+      const data = url.searchParams.get("data");
+      const nonce = url.searchParams.get("nonce");
 
-      // If there's an error from Phantom, log it
+      // If there's an error from Phantom, log it and clean up
       if (errorCode) {
         console.error("Phantom connect error:", errorCode, url.searchParams.get("errorMessage"));
-        // Clean up the URL
+        // Clean up storage and URL
+        sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
+        sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
         window.history.replaceState({}, "", url.pathname);
-        return false;
+        return null;
       }
 
-      // If we got a public key back from Phantom deep link
-      if (phantomPublicKey) {
+      // If we got encrypted data back from Phantom deep link
+      if (phantomEncryptionPubKey && data && nonce) {
         try {
-          // The phantom_encryption_public_key is for encryption, not the wallet address
-          // For the connect flow, Phantom returns data in an encrypted format
-          // However, for basic connect without encryption, we can check for the public key in data
-          const data = url.searchParams.get("data");
-          const nonce = url.searchParams.get("nonce");
-
-          if (data && nonce) {
-            // For now, store that we initiated a connection
-            // The actual public key would need to be decrypted
-            // For simpler implementation, we'll rely on the SDK to handle this
-            console.log("Phantom returned from deep link, checking SDK state...");
+          // Retrieve our stored keypair
+          const storedKeypair = sessionStorage.getItem(PHANTOM_DAPP_KEYPAIR_KEY);
+          if (!storedKeypair) {
+            console.error("No stored keypair found for decryption");
+            window.history.replaceState({}, "", url.pathname);
+            return null;
           }
 
-          // Clean up the URL parameters
-          window.history.replaceState({}, "", url.pathname);
-          return true;
+          const dappSecretKey = bs58.decode(storedKeypair);
+          const phantomPubKeyBytes = bs58.decode(phantomEncryptionPubKey);
+          const encryptedData = bs58.decode(data);
+          const nonceBytes = bs58.decode(nonce);
+
+          // Derive shared secret using X25519
+          const sharedSecret = nacl.box.before(phantomPubKeyBytes, dappSecretKey);
+
+          // Decrypt the data
+          const decryptedData = nacl.box.open.after(encryptedData, nonceBytes, sharedSecret);
+          if (!decryptedData) {
+            console.error("Failed to decrypt Phantom response");
+            window.history.replaceState({}, "", url.pathname);
+            return null;
+          }
+
+          // Parse the JSON response
+          const response = JSON.parse(new TextDecoder().decode(decryptedData));
+          console.log("Phantom deep link response:", response);
+
+          if (response.public_key) {
+            const walletPubKey = new PublicKey(response.public_key);
+
+            // Clean up storage
+            sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
+            sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+
+            // Clean up URL
+            window.history.replaceState({}, "", url.pathname);
+
+            return walletPubKey;
+          }
         } catch (err) {
           console.error("Failed to parse Phantom callback:", err);
         }
+
+        // Clean up URL even on error
+        window.history.replaceState({}, "", url.pathname);
       }
 
-      return false;
+      return null;
     };
 
     const initializeProvider = async () => {
       setIsLoading(true);
 
-      // Check for deep link callback first
-      handleDeepLinkCallback();
+      // Check for deep link callback first (returns wallet public key if present)
+      const deepLinkPubKey = handleDeepLinkCallback();
+      if (deepLinkPubKey) {
+        setPublicKey(deepLinkPubKey);
+        setIsConnected(true);
+        setIsPhantomInstalled(true);
+        setConnectionMethod("deeplink");
+        setIsLoading(false);
+        return;
+      }
 
       // On mobile, we can't detect if Phantom app is installed
       // But we can always try to use it via deep links / SDK
@@ -291,19 +335,26 @@ export function usePhantom(): UsePhantomResult {
 
     // On mobile, use Phantom deep link to open the app
     if (isMobile) {
-      const currentUrl = window.location.href;
-      const appUrl = encodeURIComponent(window.location.origin);
-      const redirectUrl = encodeURIComponent(currentUrl);
+      // Generate a keypair for encrypted communication with Phantom
+      const dappKeyPair = nacl.box.keyPair();
+      const dappPublicKeyBase58 = bs58.encode(dappKeyPair.publicKey);
+      const dappSecretKeyBase58 = bs58.encode(dappKeyPair.secretKey);
 
-      // Mark that we're waiting for Phantom to respond
-      // This prevents showing errors when the user returns before completing
+      // Store the secret key for decryption when Phantom redirects back
       if (typeof sessionStorage !== "undefined") {
-        sessionStorage.setItem("phantom_connect_pending", Date.now().toString());
+        sessionStorage.setItem(PHANTOM_DAPP_KEYPAIR_KEY, dappSecretKeyBase58);
+        sessionStorage.setItem(PHANTOM_CONNECT_PENDING_KEY, Date.now().toString());
       }
 
-      // Use Phantom Universal Link for mobile
+      // Build redirect URL - use current URL without query params to avoid conflicts
+      const currentUrl = new URL(window.location.href);
+      currentUrl.search = ""; // Clear existing params
+      const redirectUrl = encodeURIComponent(currentUrl.toString());
+      const appUrl = encodeURIComponent(window.location.origin);
+
+      // Use Phantom Universal Link for mobile with encryption public key
       // This will open the Phantom app if installed, or redirect to app store
-      const phantomConnectUrl = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&redirect_link=${redirectUrl}&cluster=mainnet-beta`;
+      const phantomConnectUrl = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&dapp_encryption_public_key=${dappPublicKeyBase58}&redirect_link=${redirectUrl}&cluster=mainnet-beta`;
 
       // Use window.location.href for better mobile compatibility
       window.location.href = phantomConnectUrl;
