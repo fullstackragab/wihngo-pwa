@@ -4,16 +4,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { House, Search, Heart, User } from "lucide-react";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 
-const tabs = [
-  { id: "home", label: "Home", icon: House, path: "/" },
-  { id: "explore", label: "Explore", icon: Search, path: "/birds" },
-  { id: "support", label: "Support", icon: Heart, path: "/support-wihngo" },
-  { id: "profile", label: "Profile", icon: User, path: "/profile" },
+type TabId = "home" | "explore" | "support" | "profile";
+
+const tabs: { id: TabId; icon: typeof House; path: string }[] = [
+  { id: "home", icon: House, path: "/" },
+  { id: "explore", icon: Search, path: "/birds" },
+  { id: "support", icon: Heart, path: "/support-wihngo" },
+  { id: "profile", icon: User, path: "/profile" },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const t = useTranslations("navigation");
 
   const getActiveTab = () => {
     if (pathname === "/") return "home";
@@ -28,7 +32,7 @@ export function BottomNav() {
   const activeTab = getActiveTab();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-t border-border/50 safe-area-inset-bottom">
+    <nav className="fixed bottom-0 inset-x-0 z-50 bg-card/95 backdrop-blur-sm border-t border-border/50 safe-area-inset-bottom">
       <div className="max-w-2xl mx-auto px-4 py-2">
         <div className="flex items-center justify-around">
           {tabs.map((tab) => {
@@ -58,7 +62,7 @@ export function BottomNav() {
                     isActive ? "text-primary" : "text-muted-foreground"
                   }`}
                 >
-                  {tab.label}
+                  {t(tab.id)}
                 </span>
               </Link>
             );

@@ -32,6 +32,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
@@ -39,6 +40,8 @@ export default function ProfilePage() {
   const router = useRouter();
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const t = useTranslations("profile");
+  const tCommon = useTranslations("common");
 
   const handleConnectWallet = async () => {
     setIsConnecting(true);
@@ -90,7 +93,7 @@ export default function ProfilePage() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h2>Profile</h2>
+            <h2>{t("title")}</h2>
           </div>
         </div>
       </div>
@@ -131,7 +134,7 @@ export default function ProfilePage() {
                 <Wallet className="w-5 h-5 text-primary" />
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium">Wallet Connected</span>
+                    <span className="text-sm font-medium">{t("walletConnected")}</span>
                     <div className="w-2 h-2 rounded-full bg-green-500" />
                   </div>
                   <p className="text-xs text-muted-foreground font-mono break-all">
@@ -145,7 +148,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-3">
                     <Wallet className="w-5 h-5 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
-                      No wallet connected
+                      {t("noWalletConnected")}
                     </span>
                   </div>
                   <Button
@@ -157,24 +160,23 @@ export default function ProfilePage() {
                   >
                     {isConnecting ? (
                       <>
-                        <LoadingSpinner className="w-4 h-4 mr-2" />
-                        Connecting...
+                        <LoadingSpinner className="w-4 h-4 me-2" />
+                        {tCommon("loading")}
                       </>
                     ) : (
-                      "Connect"
+                      t("connect")
                     )}
                   </Button>
                 </div>
                 {!isPhantomInstalled && (
-                  <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
-                    <span>Phantom wallet not detected.</span>
+                  <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 p-2 rounded-lg">
                     <a
                       href="https://phantom.app/"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-purple-600 font-medium hover:underline"
                     >
-                      Get Phantom <ExternalLink className="w-3 h-3" />
+                      {t("getPhantom")} <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
                 )}
@@ -197,9 +199,9 @@ export default function ProfilePage() {
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">Birds I&apos;ve Supported</h4>
+                <h4 className="mb-1">{t("birdsSupported")}</h4>
                 <p className="text-sm text-muted-foreground">
-                  View the birds you&apos;ve helped
+                  {t("birdsSupportedDesc")}
                 </p>
               </div>
             </div>
@@ -209,9 +211,9 @@ export default function ProfilePage() {
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <BirdIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">My Birds</h4>
+                <h4 className="mb-1">{t("myBirds")}</h4>
                 <p className="text-sm text-muted-foreground">
-                  Manage birds you&apos;re caring for
+                  {t("myBirdsDesc")}
                 </p>
               </div>
             </div>
@@ -221,9 +223,9 @@ export default function ProfilePage() {
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <Flower2 className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">Create Memorial</h4>
+                <h4 className="mb-1">{t("createMemorial")}</h4>
                 <p className="text-sm text-muted-foreground">
-                  Honor a bird&apos;s memory
+                  {t("createMemorialDesc")}
                 </p>
               </div>
             </div>
@@ -233,9 +235,9 @@ export default function ProfilePage() {
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <Wallet className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">Wallet & Support</h4>
+                <h4 className="mb-1">{t("walletSupport")}</h4>
                 <p className="text-sm text-muted-foreground">
-                  Manage your wallet and view history
+                  {t("walletSupportDesc")}
                 </p>
               </div>
             </div>
@@ -250,15 +252,15 @@ export default function ProfilePage() {
           className="space-y-3"
         >
           <h3 className="text-sm font-medium text-muted-foreground px-1">
-            Explore
+            {t("exploreSection")}
           </h3>
           <Link href="/knowledge">
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <Library className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">Knowledge Hub</h4>
+                <h4 className="mb-1">{t("knowledgeHub")}</h4>
                 <p className="text-sm text-muted-foreground">
-                  Guides, species, and bird care wisdom
+                  {t("knowledgeHubDesc")}
                 </p>
               </div>
             </div>
@@ -268,24 +270,24 @@ export default function ProfilePage() {
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <Lightbulb className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">Initiatives</h4>
+                <h4 className="mb-1">{tCommon("initiatives") || "Initiatives"}</h4>
                 <p className="text-sm text-muted-foreground">
-                  Real solutions for better bird life
+                  {t("initiativesDesc")}
                 </p>
               </div>
             </div>
           </Link>
 
           <h3 className="text-sm font-medium text-muted-foreground px-1 pt-3">
-            Learn More
+            {t("learnMore")}
           </h3>
           <Link href="/about">
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">About Wihngo</h4>
+                <h4 className="mb-1">{t("aboutWihngo")}</h4>
                 <p className="text-sm text-muted-foreground">
-                  Our mission and values
+                  {t("aboutWihngoDesc")}
                 </p>
               </div>
             </div>
@@ -295,9 +297,9 @@ export default function ProfilePage() {
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <Feather className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">Why Birds Matter</h4>
+                <h4 className="mb-1">{t("whyBirdsMatter")}</h4>
                 <p className="text-sm text-muted-foreground">
-                  Understanding their vulnerability
+                  {t("whyBirdsMatterDesc")}
                 </p>
               </div>
             </div>
@@ -307,9 +309,9 @@ export default function ProfilePage() {
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <HandHeart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">Support Birds</h4>
+                <h4 className="mb-1">{t("supportBirds")}</h4>
                 <p className="text-sm text-muted-foreground">
-                  How your help makes a difference
+                  {t("supportBirdsDesc")}
                 </p>
               </div>
             </div>
@@ -319,9 +321,9 @@ export default function ProfilePage() {
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <BookOpen className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">Chicken Happiness</h4>
+                <h4 className="mb-1">{t("chickenHappiness")}</h4>
                 <p className="text-sm text-muted-foreground">
-                  The right to a better life
+                  {t("chickenHappinessDesc")}
                 </p>
               </div>
             </div>
@@ -331,9 +333,9 @@ export default function ProfilePage() {
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <Scale className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">Our Principles</h4>
+                <h4 className="mb-1">{t("ourPrinciples")}</h4>
                 <p className="text-sm text-muted-foreground">
-                  What we believe and how we operate
+                  {t("ourPrinciplesDesc")}
                 </p>
               </div>
             </div>
@@ -343,9 +345,9 @@ export default function ProfilePage() {
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">Manifesto</h4>
+                <h4 className="mb-1">{t("manifesto")}</h4>
                 <p className="text-sm text-muted-foreground">
-                  Our philosophy on living with birds
+                  {t("manifestoDesc")}
                 </p>
               </div>
             </div>
@@ -355,9 +357,9 @@ export default function ProfilePage() {
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <Users className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">Open Call</h4>
+                <h4 className="mb-1">{t("openCall")}</h4>
                 <p className="text-sm text-muted-foreground">
-                  Join us in building bird-friendly tools
+                  {t("openCallDesc")}
                 </p>
               </div>
             </div>
@@ -372,13 +374,13 @@ export default function ProfilePage() {
           className="space-y-3"
         >
           <h3 className="text-sm font-medium text-muted-foreground px-1">
-            Language
+            {tCommon("language")}
           </h3>
           <div className="p-4 bg-card rounded-xl border border-border/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Globe className="w-5 h-5 text-primary" />
-                <span className="font-medium">Language</span>
+                <span className="font-medium">{tCommon("language")}</span>
               </div>
               <LanguageSwitcher variant="buttons" />
             </div>
@@ -394,7 +396,7 @@ export default function ProfilePage() {
         >
           <Link href="/profile/edit">
             <Button variant="outline" className="w-full rounded-full">
-              Edit Profile
+              {t("editProfile")}
             </Button>
           </Link>
 
@@ -403,7 +405,7 @@ export default function ProfilePage() {
             className="w-full flex items-center justify-center gap-2 py-3 text-destructive font-medium"
           >
             <LogOut className="w-5 h-5" />
-            Sign Out
+            {t("signOut")}
           </button>
         </motion.div>
       </div>

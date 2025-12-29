@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 interface UploadResponse {
   s3Key: string;
@@ -34,6 +35,8 @@ export default function CreateBirdPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { walletAddress, isConnected } = usePhantom();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const t = useTranslations("createBird");
+  const tErrors = useTranslations("errors");
 
   // Form state
   const [name, setName] = useState("");
@@ -78,12 +81,12 @@ export default function CreateBirdPage() {
     if (file) {
       // Validate file type
       if (!file.type.startsWith("image/")) {
-        setError("Please select an image file");
+        setError(tErrors("selectImage"));
         return;
       }
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        setError("Image must be less than 5MB");
+        setError(tErrors("imageTooLarge"));
         return;
       }
       setImageFile(file);
@@ -109,15 +112,15 @@ export default function CreateBirdPage() {
 
     // Validation
     if (!name.trim()) {
-      setError("Please enter your bird's name");
+      setError(tErrors("enterBirdName"));
       return;
     }
     if (!species.trim()) {
-      setError("Please enter the species");
+      setError(tErrors("enterSpecies"));
       return;
     }
     if (!wallet.trim()) {
-      setError("Please enter a wallet address to receive support");
+      setError(tErrors("enterWallet"));
       return;
     }
 
@@ -136,7 +139,7 @@ export default function CreateBirdPage() {
           imageS3Key = uploadResult.s3Key;
         } catch (uploadErr) {
           console.error("Image upload failed:", uploadErr);
-          setError("Failed to upload image. Please try again.");
+          setError(tErrors("uploadFailed"));
           setIsUploading(false);
           return;
         }
@@ -184,7 +187,7 @@ export default function CreateBirdPage() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h2>Add Bird</h2>
+            <h2>{t("title")}</h2>
           </div>
         </div>
       </div>
@@ -200,10 +203,10 @@ export default function CreateBirdPage() {
             <Bird className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-xl font-semibold text-foreground mb-1">
-            Create Bird Profile
+            {t("createProfile")}
           </h1>
           <p className="text-muted-foreground text-sm">
-            Share your bird&apos;s story with the community
+            {t("shareStory")}
           </p>
         </motion.div>
 
@@ -214,7 +217,7 @@ export default function CreateBirdPage() {
           transition={{ delay: 0.05 }}
         >
           <label className="block text-sm font-medium text-foreground mb-2">
-            Photo
+            {t("photo")}
           </label>
           <input
             ref={fileInputRef}
@@ -249,9 +252,9 @@ export default function CreateBirdPage() {
                 <Camera className="w-7 h-7 text-primary" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-medium text-foreground">Add a photo</p>
+                <p className="text-sm font-medium text-foreground">{t("addPhoto")}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Tap to upload (max 5MB)
+                  {t("photoHint")}
                 </p>
               </div>
             </button>
@@ -267,59 +270,59 @@ export default function CreateBirdPage() {
         >
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">
-              Name <span className="text-destructive">*</span>
+              {t("name")} <span className="text-destructive">*</span>
             </label>
             <Input
               id="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Your bird's name"
+              placeholder={t("namePlaceholder")}
               maxLength={50}
             />
           </div>
 
           <div>
             <label htmlFor="species" className="block text-sm font-medium text-foreground mb-2">
-              Species <span className="text-destructive">*</span>
+              {t("species")} <span className="text-destructive">*</span>
             </label>
             <Input
               id="species"
               type="text"
               value={species}
               onChange={(e) => setSpecies(e.target.value)}
-              placeholder="e.g. Parakeet, Canary, Cockatiel"
+              placeholder={t("speciesPlaceholder")}
               maxLength={100}
             />
           </div>
 
           <div>
             <label htmlFor="age" className="block text-sm font-medium text-foreground mb-2">
-              Age
+              {t("age")}
             </label>
             <Input
               id="age"
               type="text"
               value={age}
               onChange={(e) => setAge(e.target.value)}
-              placeholder="e.g. 2 years, 6 months"
+              placeholder={t("agePlaceholder")}
               maxLength={50}
             />
           </div>
 
           <div>
             <label htmlFor="location" className="block text-sm font-medium text-foreground mb-2">
-              Location
+              {t("location")}
             </label>
             <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <MapPin className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 id="location"
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="City, Country"
-                className="pl-10"
+                placeholder={t("locationPlaceholder")}
+                className="ps-10"
                 maxLength={100}
               />
             </div>
@@ -327,17 +330,17 @@ export default function CreateBirdPage() {
 
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-foreground mb-2">
-              About
+              {t("about")}
             </label>
             <textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Tell us about your bird's personality, needs, or story..."
+              placeholder={t("aboutPlaceholder")}
               className="w-full min-h-[120px] px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
               maxLength={1000}
             />
-            <p className="text-xs text-muted-foreground mt-1 text-right">
+            <p className="text-xs text-muted-foreground mt-1 text-end">
               {description.length}/1000
             </p>
           </div>
@@ -353,7 +356,7 @@ export default function CreateBirdPage() {
           <div className="flex items-center gap-2">
             <Wallet className="w-5 h-5 text-primary" />
             <label htmlFor="wallet" className="text-sm font-medium text-foreground">
-              Support Wallet <span className="text-destructive">*</span>
+              {t("supportWallet")} <span className="text-destructive">*</span>
             </label>
           </div>
           <Input
@@ -361,11 +364,11 @@ export default function CreateBirdPage() {
             type="text"
             value={wallet}
             onChange={(e) => setWallet(e.target.value)}
-            placeholder="Solana wallet address"
+            placeholder={t("walletPlaceholder")}
             className="font-mono text-sm"
           />
           <p className="text-xs text-muted-foreground">
-            USDC support will be sent directly to this Solana wallet address.
+            {t("walletHint")}
           </p>
           {isConnected && walletAddress && wallet !== walletAddress && (
             <button
@@ -373,7 +376,7 @@ export default function CreateBirdPage() {
               onClick={() => setWallet(walletAddress)}
               className="text-xs text-primary hover:underline"
             >
-              Use connected wallet ({walletAddress.slice(0, 8)}...)
+              {t("useConnectedWallet")} ({walletAddress.slice(0, 8)}...)
             </button>
           )}
         </motion.div>
@@ -406,12 +409,12 @@ export default function CreateBirdPage() {
             {isSubmitting ? (
               <>
                 <LoadingSpinner className="w-5 h-5" />
-                {isUploading ? "Uploading..." : "Creating..."}
+                {isUploading ? t("uploading") : t("creating")}
               </>
             ) : (
               <>
                 <CheckCircle2 className="w-5 h-5" />
-                Create Bird Profile
+                {t("createButton")}
               </>
             )}
           </Button>
@@ -424,7 +427,7 @@ export default function CreateBirdPage() {
           transition={{ delay: 0.25 }}
           className="text-center text-xs text-muted-foreground"
         >
-          You can edit your bird&apos;s profile anytime after creating it.
+          {t("canEditLater")}
         </motion.p>
       </form>
     </div>

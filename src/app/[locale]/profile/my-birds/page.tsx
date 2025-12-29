@@ -12,10 +12,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 export default function MyBirdsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const t = useTranslations("myBirds");
+  const tCommon = useTranslations("common");
 
   const { data: birds, isLoading } = useQuery({
     queryKey: ["myBirds"],
@@ -52,12 +55,12 @@ export default function MyBirdsPage() {
               >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              <h2>My Birds</h2>
+              <h2>{t("title")}</h2>
             </div>
             <Link href="/birds/create">
               <Button size="sm" className="rounded-full gap-1.5">
                 <Plus className="w-4 h-4" />
-                Add Bird
+                {t("addBird")}
               </Button>
             </Link>
           </div>
@@ -79,15 +82,15 @@ export default function MyBirdsPage() {
               <Bird className="w-10 h-10 text-primary" />
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-2">
-              No birds yet
+              {t("noBirdsYet")}
             </h3>
             <p className="text-muted-foreground mb-8 max-w-sm mx-auto">
-              Add your first bird to start sharing their story and receiving support from the community.
+              {t("noBirdsDesc")}
             </p>
             <Link href="/birds/create">
               <Button size="lg" className="rounded-full gap-2">
                 <Plus className="w-5 h-5" />
-                Add Your First Bird
+                {t("addFirstBird")}
               </Button>
             </Link>
           </motion.div>
@@ -120,8 +123,8 @@ export default function MyBirdsPage() {
                         </div>
                       )}
                       {bird.isMemorial && (
-                        <div className="absolute top-2 left-2 bg-foreground/70 text-card px-2 py-0.5 rounded-full text-xs">
-                          Memorial
+                        <div className="absolute top-2 start-2 bg-foreground/70 text-card px-2 py-0.5 rounded-full text-xs">
+                          {tCommon("memorial") || "Memorial"}
                         </div>
                       )}
                     </div>
@@ -168,7 +171,7 @@ export default function MyBirdsPage() {
                       <Link href={`/birds/${bird.birdId}/edit`}>
                         <Button variant="outline" size="sm" className="rounded-full gap-1.5">
                           <Pencil className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">Edit</span>
+                          <span className="hidden sm:inline">{tCommon("edit")}</span>
                         </Button>
                       </Link>
                     </div>

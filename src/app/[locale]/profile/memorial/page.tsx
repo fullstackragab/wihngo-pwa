@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
+import { useTranslations } from "next-intl";
 
 type Step = "select" | "confirm" | "complete";
 
@@ -24,6 +25,8 @@ export default function MemorialAnnouncementPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const t = useTranslations("memorial");
+  const tCommon = useTranslations("common");
 
   const [step, setStep] = useState<Step>("select");
   const [selectedBirdId, setSelectedBirdId] = useState<string | null>(null);
@@ -103,7 +106,7 @@ export default function MemorialAnnouncementPage() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h2>Memorial</h2>
+            <h2>{t("title")}</h2>
           </div>
         </div>
       </div>
@@ -125,10 +128,10 @@ export default function MemorialAnnouncementPage() {
                   <Flower2 className="w-8 h-8 text-foreground/70" />
                 </div>
                 <h1 className="text-xl font-semibold text-foreground mb-2">
-                  Create a Memorial
+                  {t("createMemorial")}
                 </h1>
                 <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-                  Honor your bird&apos;s memory and allow the community to share tributes.
+                  {t("honorMemory")}
                 </p>
               </div>
 
@@ -142,21 +145,21 @@ export default function MemorialAnnouncementPage() {
                   <Bird className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
                   <p className="text-muted-foreground">
                     {birds && birds.length > 0
-                      ? "All your birds are already memorials."
-                      : "You don't have any birds yet."}
+                      ? t("allMemorials")
+                      : tCommon("notFound")}
                   </p>
                   <Button
                     variant="outline"
                     className="mt-4 rounded-full"
                     onClick={() => router.push("/profile/my-birds")}
                   >
-                    Go to My Birds
+                    {t("backToMyBirds")}
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    Select a bird to create a memorial:
+                    {t("selectBird")}
                   </p>
                   {eligibleBirds.map((bird, index) => (
                     <motion.button
@@ -234,34 +237,34 @@ export default function MemorialAnnouncementPage() {
                   <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <h3 className="font-medium text-foreground mb-1">
-                      This action cannot be undone
+                      {t("cannotBeUndone")}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Creating a memorial is a permanent change. Please confirm this is what you want.
+                      {t("permanentChange")}
                     </p>
                   </div>
                 </div>
 
                 <div className="border-t border-border/50 pt-4 space-y-3">
                   <p className="text-sm text-foreground">
-                    When you create a memorial for {selectedBird.name}:
+                    {t("whenYouCreate", { name: selectedBird.name })}
                   </p>
                   <ul className="text-sm text-muted-foreground space-y-2">
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                      A dedicated memorial page will be created
+                      {t("memorialPageCreated")}
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                      The community can share tributes and memories
+                      {t("communityTributes")}
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                      Past supporters will be notified with a compassionate message
+                      {t("supportersNotified")}
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                      {selectedBird.name} will no longer accept new support
+                      {t("noMoreSupport", { name: selectedBird.name })}
                     </li>
                   </ul>
                 </div>
@@ -271,7 +274,7 @@ export default function MemorialAnnouncementPage() {
               <div className="bg-primary/5 rounded-2xl p-4 text-center">
                 <Heart className="w-5 h-5 text-primary mx-auto mb-2" />
                 <p className="text-sm text-foreground/80 italic">
-                  &ldquo;Every bird that graces our lives leaves footprints on our hearts.&rdquo;
+                  &ldquo;{t("everyBirdQuote")}&rdquo;
                 </p>
               </div>
 
@@ -293,12 +296,12 @@ export default function MemorialAnnouncementPage() {
                   {markMemorialMutation.isPending ? (
                     <>
                       <LoadingSpinner className="w-5 h-5" />
-                      Creating Memorial...
+                      {tCommon("loading")}
                     </>
                   ) : (
                     <>
                       <Flower2 className="w-5 h-5" />
-                      Create Memorial for {selectedBird.name}
+                      {t("createMemorialButton", { name: selectedBird.name })}
                     </>
                   )}
                 </Button>
@@ -308,7 +311,7 @@ export default function MemorialAnnouncementPage() {
                   disabled={markMemorialMutation.isPending}
                   className="w-full rounded-full"
                 >
-                  Cancel
+                  {tCommon("cancel")}
                 </Button>
               </div>
             </motion.div>
@@ -328,20 +331,19 @@ export default function MemorialAnnouncementPage() {
 
               <div>
                 <h2 className="text-xl font-semibold text-foreground mb-2">
-                  Memorial Created
+                  {t("memorialCreated")}
                 </h2>
                 <p className="text-muted-foreground max-w-sm mx-auto">
-                  {selectedBird.name}&apos;s memorial page is now live.
-                  The community can share their tributes and memories.
+                  {t("memorialLive", { name: selectedBird.name })}
                 </p>
               </div>
 
               <div className="bg-card rounded-2xl border border-border/50 p-4 max-w-sm mx-auto">
                 <p className="text-sm text-muted-foreground mb-1">
-                  All past supporters have been notified
+                  {t("supportersNotifiedConfirm")}
                 </p>
                 <p className="text-xs text-muted-foreground/70">
-                  They received a compassionate email about {selectedBird.name}&apos;s memorial.
+                  {t("supportersNotifiedDesc", { name: selectedBird.name })}
                 </p>
               </div>
 
@@ -352,14 +354,14 @@ export default function MemorialAnnouncementPage() {
                   size="lg"
                 >
                   <Heart className="w-5 h-5" />
-                  View Memorial Page
+                  {t("viewMemorialPage")}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => router.push("/profile/my-birds")}
                   className="w-full rounded-full"
                 >
-                  Back to My Birds
+                  {t("backToMyBirds")}
                 </Button>
               </div>
             </motion.div>
