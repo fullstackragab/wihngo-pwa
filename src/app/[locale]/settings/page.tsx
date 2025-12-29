@@ -11,7 +11,9 @@ import {
   HelpCircle,
   FileText,
   ChevronRight,
+  Globe,
 } from "lucide-react";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -50,24 +52,42 @@ export default function SettingsPage() {
       </header>
 
       {/* Content */}
-      <main className="max-w-lg mx-auto px-4 py-6">
-        <Card padding="none">
-          {settingsItems.map((item, index) => (
-            <Link key={item.href} href={item.href}>
-              <div
-                className={`flex items-center justify-between px-4 py-3.5 ${
-                  index !== settingsItems.length - 1 ? "border-b border-gray-100" : ""
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <item.icon className="w-5 h-5 text-gray-500" />
-                  <span className="font-medium text-gray-900">{item.label}</span>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+      <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
+        {/* Language Selection */}
+        <div>
+          <h3 className="text-sm font-medium text-gray-500 mb-3 px-1">Language</h3>
+          <Card padding="none">
+            <div className="flex items-center justify-between px-4 py-3.5">
+              <div className="flex items-center gap-3">
+                <Globe className="w-5 h-5 text-gray-500" />
+                <span className="font-medium text-gray-900">Language</span>
               </div>
-            </Link>
-          ))}
-        </Card>
+              <LanguageSwitcher variant="buttons" />
+            </div>
+          </Card>
+        </div>
+
+        {/* Other Settings */}
+        <div>
+          <h3 className="text-sm font-medium text-gray-500 mb-3 px-1">General</h3>
+          <Card padding="none">
+            {settingsItems.map((item, index) => (
+              <Link key={item.href} href={item.href}>
+                <div
+                  className={`flex items-center justify-between px-4 py-3.5 ${
+                    index !== settingsItems.length - 1 ? "border-b border-gray-100" : ""
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className="w-5 h-5 text-gray-500" />
+                    <span className="font-medium text-gray-900">{item.label}</span>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                </div>
+              </Link>
+            ))}
+          </Card>
+        </div>
 
         {/* App Version */}
         <p className="text-center text-sm text-gray-400 mt-8">

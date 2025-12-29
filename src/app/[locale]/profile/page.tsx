@@ -25,7 +25,9 @@ import {
   ExternalLink,
   FileText,
   Users,
+  Globe,
 } from "lucide-react";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "motion/react";
@@ -349,11 +351,32 @@ export default function ProfilePage() {
           </Link>
         </motion.div>
 
-        {/* Edit Profile & Logout */}
+        {/* Language Selection */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
+          className="space-y-3"
+        >
+          <h3 className="text-sm font-medium text-muted-foreground px-1">
+            Language
+          </h3>
+          <div className="p-4 bg-card rounded-xl border border-border/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Globe className="w-5 h-5 text-primary" />
+                <span className="font-medium">Language</span>
+              </div>
+              <LanguageSwitcher variant="buttons" />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Edit Profile & Logout */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
           className="space-y-3"
         >
           <Link href="/profile/edit">

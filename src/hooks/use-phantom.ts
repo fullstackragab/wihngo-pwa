@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { PublicKey, Transaction, VersionedTransaction, Connection } from "@solana/web3.js";
+import { PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
 import bs58 from "bs58";
-import { detectPlatform, isMobileDevice, getPhantomDeepLink, getRedirectUrl } from "@/lib/phantom/platform";
-import { SOLANA_CONFIG } from "@/lib/config";
+import { detectPlatform, isMobileDevice } from "@/lib/phantom/platform";
 
 // Try to import the SDK hooks - they may not be available in all contexts
 let useSolanaSDK: (() => { solana: SolanaSDK }) | undefined;
@@ -119,7 +118,7 @@ export function usePhantom(): UsePhantomResult {
     const initializeProvider = async () => {
       setIsLoading(true);
 
-      // Check for SDK connection first
+      // Check for SDK connection first (handles both desktop and mobile)
       if (sdkState?.isConnected && solanaSDK) {
         try {
           const pubKeyStr = await solanaSDK.getPublicKey();
@@ -136,10 +135,17 @@ export function usePhantom(): UsePhantomResult {
         }
       }
 
+      // On mobile, SDK might still be loading - mark as installed if SDK is available
+      if (isMobile && solanaSDK) {
+        setIsPhantomInstalled(true);
+      }
+
       // Check for browser extension
       const phantomProvider = getProvider();
       setProvider(phantomProvider);
-      setIsPhantomInstalled(!!phantomProvider);
+      if (phantomProvider) {
+        setIsPhantomInstalled(true);
+      }
 
       if (phantomProvider?.publicKey) {
         setPublicKey(phantomProvider.publicKey);
@@ -152,10 +158,15 @@ export function usePhantom(): UsePhantomResult {
 
     initializeProvider();
 
-    // Re-check after a delay (Phantom may load async)
+    // Re-check after a delay (Phantom SDK or extension may load async)
     const timeout = setTimeout(initializeProvider, 100);
-    return () => clearTimeout(timeout);
-  }, [sdkState?.isConnected]);
+    // Also check after SDK state changes settle
+    const timeout2 = setTimeout(initializeProvider, 500);
+    return () => {
+      clearTimeout(timeout);
+      clearTimeout(timeout2);
+    };
+  }, [sdkState?.isConnected, sdkState?.isLoading, isMobile]);
 
   // Listen for provider events
   useEffect(() => {
@@ -192,10 +203,12 @@ export function usePhantom(): UsePhantomResult {
   }, [provider]);
 
   const connect = useCallback(async (): Promise<PublicKey | null> => {
-    // Try SDK first (works for both desktop and mobile with embedded provider)
+    // Try SDK first - the SDK handles both desktop and mobile (including deep links)
+    // This should be the primary connection method as it handles all the complexity
     if (solanaSDK) {
       try {
         // getPublicKey triggers connect flow if not connected
+        // On mobile, this will handle the deep link flow automatically
         const pubKeyStr = await solanaSDK.getPublicKey();
         if (pubKeyStr) {
           const pubKey = new PublicKey(pubKeyStr);
@@ -206,12 +219,16 @@ export function usePhantom(): UsePhantomResult {
         }
       } catch (err) {
         console.warn("SDK connect failed, trying alternatives:", err);
-        // Fall through to other methods
+        // Fall through to other methods only on desktop
+        if (isMobile) {
+          // On mobile, SDK should handle everything - don't fall through to manual deep links
+          throw err;
+        }
       }
     }
 
-    // Try browser extension (desktop)
-    if (provider) {
+    // Try browser extension (desktop only)
+    if (provider && !isMobile) {
       try {
         const response = await provider.connect();
         setPublicKey(response.publicKey);
@@ -220,33 +237,13 @@ export function usePhantom(): UsePhantomResult {
         return response.publicKey;
       } catch (error) {
         console.error("Failed to connect via extension:", error);
-        // Don't throw yet, try deep link on mobile
-        if (!isMobile) {
-          throw error;
-        }
+        throw error;
       }
-    }
-
-    // Mobile deep link fallback (only if SDK and extension both failed)
-    if (isMobile) {
-      // Use current path to redirect back after Phantom connection
-      const currentPath = window.location.pathname + window.location.search;
-      const redirectUrl = getRedirectUrl(currentPath);
-      const deepLink = getPhantomDeepLink("connect", {
-        app_url: window.location.origin,
-        redirect_link: redirectUrl,
-        cluster: SOLANA_CONFIG.network,
-      });
-
-      // Open Phantom app
-      window.location.href = deepLink;
-      setConnectionMethod("deeplink");
-      return null;
     }
 
     // No provider available - open Phantom website
     window.open("https://phantom.app/", "_blank");
-    throw new Error("Phantom wallet not installed");
+    throw new Error("Phantom wallet not installed. Please install Phantom to continue.");
   }, [provider, solanaSDK, isMobile]);
 
   const disconnect = useCallback(async () => {
