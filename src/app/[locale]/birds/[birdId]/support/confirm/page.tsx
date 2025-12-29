@@ -39,6 +39,25 @@ import bs58 from "bs58";
 // Storage keys for mobile deep link flow (must match use-phantom.ts)
 const PHANTOM_CONNECT_PENDING_KEY = "phantom_connect_pending";
 const PHANTOM_DAPP_KEYPAIR_KEY = "phantom_dapp_keypair";
+const PHANTOM_CONNECTION_ID_KEY = "phantom_connection_id";
+
+// Initialize connection on server (generates keypair server-side)
+async function initServerConnection(): Promise<{ connectionId: string; dappPublicKey: string } | null> {
+  try {
+    const response = await fetch("/api/phantom", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
 
 type SupportStep =
   | "connect_wallet"
@@ -158,6 +177,18 @@ function SupportConfirmContent() {
     }
   }, [authLoading, isAuthenticated, router]);
 
+  // Helper to clean up all Phantom storage
+  const cleanupPhantomStorage = () => {
+    localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
+    localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+    localStorage.removeItem(PHANTOM_CONNECTION_ID_KEY);
+    localStorage.removeItem("phantom_return_url");
+    localStorage.removeItem("phantom_wallet_address");
+    sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
+    sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+    sessionStorage.removeItem(PHANTOM_CONNECTION_ID_KEY);
+  };
+
   // Check for pending Phantom mobile connection on mount
   useEffect(() => {
     if (typeof localStorage === "undefined") return;
@@ -172,11 +203,7 @@ function SupportConfirmContent() {
         setStep("waiting_for_phantom");
         // If wallet is now connected, clear pending and proceed
         if (isConnected && walletAddress) {
-          localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-          localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
-          localStorage.removeItem("phantom_return_url");
-          sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-          sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+          cleanupPhantomStorage();
           linkWallet(walletAddress)
             .then(() => checkBalanceAndProceed())
             .catch((err) => {
@@ -186,11 +213,7 @@ function SupportConfirmContent() {
         }
       } else {
         // Pending expired, clear it
-        localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-        localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
-        localStorage.removeItem("phantom_return_url");
-        sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-        sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+        cleanupPhantomStorage();
       }
     }
   }, [isConnected, walletAddress]);
@@ -204,16 +227,8 @@ function SupportConfirmContent() {
     const hasValidAmounts = totalAmount > 0;
     // Also handle the case where we're waiting for Phantom and the wallet connected
     if (isConnected && walletAddress && (step === "connect_wallet" || step === "waiting_for_phantom") && hasValidAmounts) {
-      // Clear any pending mobile state (both localStorage and sessionStorage)
-      if (typeof localStorage !== "undefined") {
-        localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-        localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
-        localStorage.removeItem("phantom_return_url");
-      }
-      if (typeof sessionStorage !== "undefined") {
-        sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-        sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
-      }
+      // Clear any pending mobile state
+      cleanupPhantomStorage();
       // Ensure wallet is linked to backend, then proceed
       linkWallet(walletAddress)
         .then(() => checkBalanceAndProceed())
@@ -464,19 +479,33 @@ function SupportConfirmContent() {
               <Button
                 fullWidth
                 variant="outline"
-                onClick={() => {
-                  // Generate a new keypair for encrypted communication
-                  const dappKeyPair = nacl.box.keyPair();
-                  const dappPublicKeyBase58 = bs58.encode(dappKeyPair.publicKey);
-                  const dappSecretKeyBase58 = bs58.encode(dappKeyPair.secretKey);
+                onClick={async () => {
+                  // Try server-side keypair generation first (for cross-browser support)
+                  const serverInit = await initServerConnection();
 
-                  // Store for decryption (use localStorage to persist across browsers)
-                  localStorage.setItem(PHANTOM_DAPP_KEYPAIR_KEY, dappSecretKeyBase58);
+                  let dappPublicKeyBase58: string;
+
+                  if (serverInit) {
+                    // Server-side keypair - works across browsers
+                    dappPublicKeyBase58 = serverInit.dappPublicKey;
+                    localStorage.setItem(PHANTOM_CONNECTION_ID_KEY, serverInit.connectionId);
+                  } else {
+                    // Fallback to local keypair generation
+                    const dappKeyPair = nacl.box.keyPair();
+                    dappPublicKeyBase58 = bs58.encode(dappKeyPair.publicKey);
+                    const dappSecretKeyBase58 = bs58.encode(dappKeyPair.secretKey);
+                    localStorage.setItem(PHANTOM_DAPP_KEYPAIR_KEY, dappSecretKeyBase58);
+                  }
+
                   localStorage.setItem(PHANTOM_CONNECT_PENDING_KEY, Date.now().toString());
                   localStorage.setItem("phantom_return_url", window.location.href);
 
-                  // Build redirect URL preserving query params
-                  const redirectUrl = encodeURIComponent(window.location.href);
+                  // Build redirect URL with connection_id
+                  const currentUrl = new URL(window.location.href);
+                  if (serverInit?.connectionId) {
+                    currentUrl.searchParams.set("phantom_connection_id", serverInit.connectionId);
+                  }
+                  const redirectUrl = encodeURIComponent(currentUrl.toString());
                   const appUrl = encodeURIComponent(window.location.origin);
 
                   window.location.href = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&dapp_encryption_public_key=${dappPublicKeyBase58}&redirect_link=${redirectUrl}&cluster=mainnet-beta`;
@@ -489,11 +518,7 @@ function SupportConfirmContent() {
                 fullWidth
                 variant="ghost"
                 onClick={() => {
-                  localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-                  localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
-                  localStorage.removeItem("phantom_return_url");
-                  sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-                  sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+                  cleanupPhantomStorage();
                   setStep("connect_wallet");
                   setError("");
                 }}

@@ -9,6 +9,62 @@ import { detectPlatform, isMobileDevice } from "@/lib/phantom/platform";
 // Storage keys for mobile deep link flow
 const PHANTOM_CONNECT_PENDING_KEY = "phantom_connect_pending";
 const PHANTOM_DAPP_KEYPAIR_KEY = "phantom_dapp_keypair";
+const PHANTOM_CONNECTION_ID_KEY = "phantom_connection_id";
+
+// Server-side decryption for cross-browser support
+async function serverDecrypt(
+  connectionId: string,
+  phantomEncryptionPublicKey: string,
+  data: string,
+  nonce: string
+): Promise<string | null> {
+  try {
+    const response = await fetch("/api/phantom?action=decrypt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        connectionId,
+        phantomEncryptionPublicKey,
+        data,
+        nonce,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Server decrypt failed:", response.status);
+      return null;
+    }
+
+    const result = await response.json();
+    if (result.success && result.walletAddress) {
+      return result.walletAddress;
+    }
+    return null;
+  } catch (err) {
+    console.error("Server decrypt error:", err);
+    return null;
+  }
+}
+
+// Initialize connection on server (generates keypair server-side)
+async function initServerConnection(): Promise<{ connectionId: string; dappPublicKey: string } | null> {
+  try {
+    const response = await fetch("/api/phantom", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      console.error("Server init failed:", response.status);
+      return null;
+    }
+
+    return await response.json();
+  } catch (err) {
+    console.error("Server init error:", err);
+    return null;
+  }
+}
 
 // Try to import the SDK hooks - they may not be available in all contexts
 let useSolanaSDK: (() => { solana: SolanaSDK }) | undefined;
@@ -120,8 +176,31 @@ export function usePhantom(): UsePhantomResult {
       return null;
     };
 
-    // Check for Phantom deep link callback (mobile flow)
-    const handleDeepLinkCallback = (): PublicKey | null => {
+    // Clean Phantom params from URL while preserving other params
+    const cleanPhantomParams = (url: URL) => {
+      const cleanUrl = new URL(url);
+      cleanUrl.searchParams.delete("phantom_encryption_public_key");
+      cleanUrl.searchParams.delete("data");
+      cleanUrl.searchParams.delete("nonce");
+      cleanUrl.searchParams.delete("errorCode");
+      cleanUrl.searchParams.delete("errorMessage");
+      cleanUrl.searchParams.delete("phantom_connection_id");
+      window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search);
+    };
+
+    // Clean up all storage
+    const cleanupStorage = () => {
+      localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
+      localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+      localStorage.removeItem(PHANTOM_CONNECTION_ID_KEY);
+      localStorage.removeItem("phantom_return_url");
+      sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
+      sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+      sessionStorage.removeItem(PHANTOM_CONNECTION_ID_KEY);
+    };
+
+    // Check for Phantom deep link callback (mobile flow) - now async for server decryption
+    const handleDeepLinkCallback = async (): Promise<PublicKey | null> => {
       if (typeof window === "undefined") return null;
 
       const url = new URL(window.location.href);
@@ -129,94 +208,87 @@ export function usePhantom(): UsePhantomResult {
       const errorCode = url.searchParams.get("errorCode");
       const data = url.searchParams.get("data");
       const nonce = url.searchParams.get("nonce");
+      // Connection ID can come from URL param or localStorage
+      const connectionIdFromUrl = url.searchParams.get("phantom_connection_id");
+      const connectionIdFromStorage = localStorage.getItem(PHANTOM_CONNECTION_ID_KEY) ||
+                                      sessionStorage.getItem(PHANTOM_CONNECTION_ID_KEY);
+      const connectionId = connectionIdFromUrl || connectionIdFromStorage;
 
       // If there's an error from Phantom, log it and clean up
       if (errorCode) {
         console.error("Phantom connect error:", errorCode, url.searchParams.get("errorMessage"));
-        // Clean up storage (both localStorage and sessionStorage)
-        localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-        localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
-        localStorage.removeItem("phantom_return_url");
-        sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-        sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
-        // Clean URL but preserve non-Phantom params
-        const cleanUrl = new URL(url);
-        cleanUrl.searchParams.delete("errorCode");
-        cleanUrl.searchParams.delete("errorMessage");
-        window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search);
+        cleanupStorage();
+        cleanPhantomParams(url);
         return null;
       }
 
       // If we got encrypted data back from Phantom deep link
       if (phantomEncryptionPubKey && data && nonce) {
-        try {
-          // Retrieve our stored keypair (try localStorage first, then sessionStorage for backwards compat)
-          const storedKeypair = localStorage.getItem(PHANTOM_DAPP_KEYPAIR_KEY) ||
-                                sessionStorage.getItem(PHANTOM_DAPP_KEYPAIR_KEY);
-          if (!storedKeypair) {
-            console.error("No stored keypair found for decryption");
-            // Clean URL but preserve query params that aren't Phantom-specific
-            const cleanUrl = new URL(url);
-            cleanUrl.searchParams.delete("phantom_encryption_public_key");
-            cleanUrl.searchParams.delete("data");
-            cleanUrl.searchParams.delete("nonce");
-            window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search);
-            return null;
+        let walletAddress: string | null = null;
+
+        // First, try local decryption (same browser that started the flow)
+        const storedKeypair = localStorage.getItem(PHANTOM_DAPP_KEYPAIR_KEY) ||
+                              sessionStorage.getItem(PHANTOM_DAPP_KEYPAIR_KEY);
+
+        if (storedKeypair) {
+          try {
+            const dappSecretKey = bs58.decode(storedKeypair);
+            const phantomPubKeyBytes = bs58.decode(phantomEncryptionPubKey);
+            const encryptedData = bs58.decode(data);
+            const nonceBytes = bs58.decode(nonce);
+
+            const sharedSecret = nacl.box.before(phantomPubKeyBytes, dappSecretKey);
+            const decryptedData = nacl.box.open.after(encryptedData, nonceBytes, sharedSecret);
+
+            if (decryptedData) {
+              const response = JSON.parse(new TextDecoder().decode(decryptedData));
+              console.log("Phantom deep link response (local decrypt):", response);
+              walletAddress = response.public_key;
+            }
+          } catch (err) {
+            console.error("Local decryption failed:", err);
           }
-
-          const dappSecretKey = bs58.decode(storedKeypair);
-          const phantomPubKeyBytes = bs58.decode(phantomEncryptionPubKey);
-          const encryptedData = bs58.decode(data);
-          const nonceBytes = bs58.decode(nonce);
-
-          // Derive shared secret using X25519
-          const sharedSecret = nacl.box.before(phantomPubKeyBytes, dappSecretKey);
-
-          // Decrypt the data
-          const decryptedData = nacl.box.open.after(encryptedData, nonceBytes, sharedSecret);
-          if (!decryptedData) {
-            console.error("Failed to decrypt Phantom response");
-            const cleanUrl = new URL(url);
-            cleanUrl.searchParams.delete("phantom_encryption_public_key");
-            cleanUrl.searchParams.delete("data");
-            cleanUrl.searchParams.delete("nonce");
-            window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search);
-            return null;
-          }
-
-          // Parse the JSON response
-          const response = JSON.parse(new TextDecoder().decode(decryptedData));
-          console.log("Phantom deep link response:", response);
-
-          if (response.public_key) {
-            const walletPubKey = new PublicKey(response.public_key);
-
-            // Clean up storage (both localStorage and sessionStorage)
-            localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-            localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
-            localStorage.removeItem("phantom_return_url");
-            sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-            sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
-
-            // Clean URL - remove Phantom params but preserve app params
-            const cleanUrl = new URL(url);
-            cleanUrl.searchParams.delete("phantom_encryption_public_key");
-            cleanUrl.searchParams.delete("data");
-            cleanUrl.searchParams.delete("nonce");
-            window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search);
-
-            return walletPubKey;
-          }
-        } catch (err) {
-          console.error("Failed to parse Phantom callback:", err);
         }
 
-        // Clean up URL even on error - preserve non-Phantom params
-        const cleanUrl = new URL(url);
-        cleanUrl.searchParams.delete("phantom_encryption_public_key");
-        cleanUrl.searchParams.delete("data");
-        cleanUrl.searchParams.delete("nonce");
-        window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search);
+        // If local decryption failed and we have a connection ID, try server-side decryption
+        // This handles the cross-browser case (PWA -> Samsung Browser)
+        if (!walletAddress && connectionId) {
+          console.log("Trying server-side decryption with connection ID:", connectionId);
+          walletAddress = await serverDecrypt(connectionId, phantomEncryptionPubKey, data, nonce);
+          if (walletAddress) {
+            console.log("Server decryption successful:", walletAddress);
+          }
+        }
+
+        // Clean up and return result
+        cleanupStorage();
+        cleanPhantomParams(url);
+
+        if (walletAddress) {
+          // Store wallet address for cross-browser access
+          localStorage.setItem("phantom_wallet_address", walletAddress);
+          return new PublicKey(walletAddress);
+        }
+
+        // If we couldn't decrypt but have the encrypted data, we're in the wrong browser
+        // Store a flag so the original browser/PWA knows to check
+        if (!walletAddress) {
+          console.log("Could not decrypt - likely wrong browser. Storing pending state.");
+          localStorage.setItem("phantom_pending_wallet_check", "true");
+        }
+      }
+
+      // Check if there's a stored wallet address from a successful cross-browser connection
+      const storedWalletAddress = localStorage.getItem("phantom_wallet_address");
+      if (storedWalletAddress) {
+        try {
+          const pubKey = new PublicKey(storedWalletAddress);
+          // Clear it after use
+          localStorage.removeItem("phantom_wallet_address");
+          return pubKey;
+        } catch {
+          localStorage.removeItem("phantom_wallet_address");
+        }
       }
 
       return null;
@@ -226,7 +298,7 @@ export function usePhantom(): UsePhantomResult {
       setIsLoading(true);
 
       // Check for deep link callback first (returns wallet public key if present)
-      const deepLinkPubKey = handleDeepLinkCallback();
+      const deepLinkPubKey = await handleDeepLinkCallback();
       if (deepLinkPubKey) {
         setPublicKey(deepLinkPubKey);
         setIsConnected(true);
@@ -363,34 +435,46 @@ export function usePhantom(): UsePhantomResult {
 
     // On mobile, use Phantom deep link to open the app
     if (isMobile) {
-      // Generate a keypair for encrypted communication with Phantom
-      const dappKeyPair = nacl.box.keyPair();
-      const dappPublicKeyBase58 = bs58.encode(dappKeyPair.publicKey);
-      const dappSecretKeyBase58 = bs58.encode(dappKeyPair.secretKey);
+      // Try server-side keypair generation first (for cross-browser support)
+      const serverInit = await initServerConnection();
 
-      // Store the secret key for decryption when Phantom redirects back
-      // Use localStorage instead of sessionStorage so it persists across browser contexts
-      if (typeof localStorage !== "undefined") {
+      let dappPublicKeyBase58: string;
+      let connectionId: string | null = null;
+
+      if (serverInit) {
+        // Server-side keypair - works across browsers
+        dappPublicKeyBase58 = serverInit.dappPublicKey;
+        connectionId = serverInit.connectionId;
+        localStorage.setItem(PHANTOM_CONNECTION_ID_KEY, connectionId);
+      } else {
+        // Fallback to local keypair generation
+        const dappKeyPair = nacl.box.keyPair();
+        dappPublicKeyBase58 = bs58.encode(dappKeyPair.publicKey);
+        const dappSecretKeyBase58 = bs58.encode(dappKeyPair.secretKey);
         localStorage.setItem(PHANTOM_DAPP_KEYPAIR_KEY, dappSecretKeyBase58);
+      }
+
+      // Store pending state
+      if (typeof localStorage !== "undefined") {
         localStorage.setItem(PHANTOM_CONNECT_PENDING_KEY, Date.now().toString());
-        // Store the current URL so user can return to it
         localStorage.setItem("phantom_return_url", window.location.href);
       }
 
-      // Build redirect URL - preserve existing query params
+      // Build redirect URL - include connection_id if we have one
       const currentUrl = new URL(window.location.href);
+      if (connectionId) {
+        currentUrl.searchParams.set("phantom_connection_id", connectionId);
+      }
       const redirectUrl = encodeURIComponent(currentUrl.toString());
       const appUrl = encodeURIComponent(window.location.origin);
 
       // Use Phantom Universal Link for mobile with encryption public key
-      // This will open the Phantom app if installed, or redirect to app store
       const phantomConnectUrl = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&dapp_encryption_public_key=${dappPublicKeyBase58}&redirect_link=${redirectUrl}&cluster=mainnet-beta`;
 
       // Use window.location.href for better mobile compatibility
       window.location.href = phantomConnectUrl;
 
       // Return null - the app will redirect back after connection
-      // Don't throw an error - this is expected behavior for mobile deep links
       return null;
     }
 
