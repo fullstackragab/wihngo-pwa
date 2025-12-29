@@ -28,7 +28,7 @@ export type Bird = {
   supportedBy: number;
   ownerId: string;
   ownerName?: string;
-  ownerWalletAddress?: string; // Solana wallet to receive support payments
+  ownerWalletAddress?: string; // Solana wallet to receive support
   age?: string;
   location?: string;
   isLoved?: boolean;

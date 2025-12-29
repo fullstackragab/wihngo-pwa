@@ -29,7 +29,7 @@ export default function WalletPage() {
           <button onClick={() => router.back()} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6 text-gray-600" />
           </button>
-          <h1 className="text-xl font-bold text-gray-900">Wallet & Payments</h1>
+          <h1 className="text-xl font-bold text-gray-900">Wallet & Support</h1>
         </div>
       </header>
 
@@ -42,19 +42,19 @@ export default function WalletPage() {
               <Wallet className="w-6 h-6 text-support-green" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Total Donated</p>
+              <p className="text-sm text-gray-500">Total Supported</p>
               <p className="text-2xl font-bold text-gray-900">$0.00</p>
             </div>
           </div>
         </Card>
 
-        {/* Payment Methods */}
+        {/* Wallets */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Payment Methods</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">Connected Wallets</h2>
           <Card>
             <div className="flex items-center gap-4 text-gray-500">
               <CreditCard className="w-5 h-5" />
-              <p>No payment methods added</p>
+              <p>No wallets connected</p>
             </div>
           </Card>
         </div>

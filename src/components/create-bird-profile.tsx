@@ -110,7 +110,7 @@ export function CreateBirdProfile({ onBack, onCreate }: CreateBirdProfileProps) 
               className="font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground leading-relaxed">
-              This is where support payments will be sent. Make sure it&apos;s a valid Solana address that accepts USDC.
+              This is where support will be sent. Make sure it&apos;s a valid Solana address that accepts USDC.
             </p>
           </div>
 

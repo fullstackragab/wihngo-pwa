@@ -17,8 +17,10 @@ export function BottomNav() {
 
   const getActiveTab = () => {
     if (pathname === "/") return "home";
+    // Check for support pages first (birds/.../support)
+    if (pathname.includes("/support")) return "support";
     if (pathname.startsWith("/birds") || pathname.startsWith("/bird/")) return "explore";
-    if (pathname.startsWith("/support-wihngo") || pathname.startsWith("/donation")) return "support";
+    if (pathname.startsWith("/support-wihngo")) return "support";
     if (pathname.startsWith("/profile")) return "profile";
     return "home";
   };

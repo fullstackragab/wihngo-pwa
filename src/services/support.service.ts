@@ -1,36 +1,36 @@
 import { apiHelper, publicGet } from "./api-helper";
 import {
-  PaymentIntent,
-  PaymentIntentResponse,
-  SubmitPaymentResponse,
-  PaymentStatus,
-  PaymentHistoryResponse,
+  SupportIntent,
+  SupportIntentResponse,
+  SubmitSupportResponse,
+  SupportStatus,
+  SupportHistoryResponse,
   LinkWalletRequest,
   LinkedWallet,
   UserBalance,
   OnChainBalanceResponse,
   PreflightRequest,
   PreflightResponse,
-} from "@/types/payment";
+} from "@/types/support";
 
 // ============================================
-// PAYMENT INTENT FLOW
+// SUPPORT INTENT FLOW
 // ============================================
 
-// Step 1: Preflight check - verify user can make payment
+// Step 1: Preflight check - verify user can support
 export async function preflightCheck(
   data: PreflightRequest
 ): Promise<PreflightResponse> {
   return apiHelper.post<PreflightResponse>("payments/support/preflight", data);
 }
 
-// Step 2: Create payment intent - backend builds the transaction
-export async function createPaymentIntent(params: {
+// Step 2: Create support intent - backend builds the transaction
+export async function createSupportIntent(params: {
   birdId: string;
   birdAmount: number;
   wihngoAmount: number;
-}): Promise<PaymentIntentResponse> {
-  const response = await apiHelper.post<PaymentIntent>("payments/intents", {
+}): Promise<SupportIntentResponse> {
+  const response = await apiHelper.post<SupportIntent>("payments/intents", {
     birdId: params.birdId,
     birdAmount: params.birdAmount,
     wihngoSupportAmount: params.wihngoAmount,
@@ -49,46 +49,36 @@ export async function createPaymentIntent(params: {
 }
 
 // Step 3: Submit signed transaction - backend submits to Solana
-export async function submitPayment(
+export async function submitSupport(
   intentId: string,
   signedTransaction: string
-): Promise<SubmitPaymentResponse> {
-  return apiHelper.post<SubmitPaymentResponse>(
+): Promise<SubmitSupportResponse> {
+  return apiHelper.post<SubmitSupportResponse>(
     `payments/intents/${intentId}/submit`,
     { signedTransaction }
   );
 }
 
-// Step 4: Poll for payment status
-export async function getPaymentStatus(intentId: string): Promise<PaymentIntent> {
-  return apiHelper.get<PaymentIntent>(`payments/intents/${intentId}`);
+// Step 4: Poll for support status
+export async function getSupportStatus(intentId: string): Promise<SupportIntent> {
+  return apiHelper.get<SupportIntent>(`payments/intents/${intentId}`);
 }
 
-// Cancel a pending payment intent
-export async function cancelPayment(intentId: string): Promise<void> {
+// Cancel a pending support intent
+export async function cancelSupport(intentId: string): Promise<void> {
   return apiHelper.post(`payments/intents/${intentId}/cancel`, {});
 }
 
 // ============================================
-// PAYMENT HISTORY
+// SUPPORT HISTORY
 // ============================================
 
-// Get P2P payment history
-export async function getPaymentHistory(
-  page = 1,
-  pageSize = 20
-): Promise<PaymentHistoryResponse> {
-  return apiHelper.get<PaymentHistoryResponse>(
-    `payments?page=${page}&pageSize=${pageSize}`
-  );
-}
-
-// Get bird support history
+// Get support history
 export async function getSupportHistory(
   page = 1,
   pageSize = 20
-): Promise<PaymentHistoryResponse> {
-  return apiHelper.get<PaymentHistoryResponse>(
+): Promise<SupportHistoryResponse> {
+  return apiHelper.get<SupportHistoryResponse>(
     `payments/support-history?page=${page}&pageSize=${pageSize}`
   );
 }
@@ -133,23 +123,4 @@ export async function checkWalletBalance(
   return publicGet<OnChainBalanceResponse>(
     `wallets/${walletAddress}/on-chain-balance`
   );
-}
-
-// ============================================
-// LEGACY COMPATIBILITY
-// ============================================
-
-// Legacy confirm payment - now uses submitPayment internally
-export async function confirmPayment(data: {
-  intentId: string;
-  transactions: { type: string; signature: string }[];
-}): Promise<{ success: boolean; message: string }> {
-  // For backwards compatibility, but the new flow uses submitPayment
-  console.warn(
-    "confirmPayment is deprecated. Use submitPayment with backend-signed transaction flow."
-  );
-  return {
-    success: false,
-    message: "Please update to new payment flow using submitPayment",
-  };
 }

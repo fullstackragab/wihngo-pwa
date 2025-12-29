@@ -224,7 +224,9 @@ export function usePhantom(): UsePhantomResult {
 
     // Mobile deep link fallback
     if (isMobile) {
-      const redirectUrl = getRedirectUrl("/donation/pay");
+      // Use current path to redirect back after Phantom connection
+      const currentPath = window.location.pathname + window.location.search;
+      const redirectUrl = getRedirectUrl(currentPath);
       const deepLink = getPhantomDeepLink("connect", {
         app_url: window.location.origin,
         redirect_link: redirectUrl,

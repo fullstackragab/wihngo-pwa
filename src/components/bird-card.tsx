@@ -90,7 +90,7 @@ export function BirdCard({ bird, onSupport, variant = "default" }: BirdCardProps
                 if (onSupport) {
                   onSupport(bird);
                 } else {
-                  window.location.href = `/donation?birdId=${bird.birdId}`;
+                  window.location.href = `/birds/${bird.birdId}/support`;
                 }
               }}
               className="w-full rounded-full gap-2"

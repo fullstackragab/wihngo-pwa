@@ -1,10 +1,10 @@
-// Payment Types - Aligned with Backend API
+// Support Types - Aligned with Backend API
 // Bird money is sacred: 100% goes to bird owner
 // Wihngo support is optional, transparent, and additive
 
-export type PaymentIntentStatus =
+export type SupportIntentStatus =
   | "Pending"
-  | "AwaitingPayment"
+  | "AwaitingConfirmation"
   | "Processing"
   | "Confirming"
   | "Completed"
@@ -12,25 +12,25 @@ export type PaymentIntentStatus =
   | "Expired"
   | "Cancelled";
 
-export const TERMINAL_STATUSES: PaymentIntentStatus[] = [
+export const TERMINAL_STATUSES: SupportIntentStatus[] = [
   "Completed",
   "Failed",
   "Expired",
   "Cancelled",
 ];
 
-export const SUCCESS_STATUSES: PaymentIntentStatus[] = ["Completed"];
+export const SUCCESS_STATUSES: SupportIntentStatus[] = ["Completed"];
 
-// Create Payment Intent - Request to backend
-export interface CreatePaymentIntentRequest {
+// Create Support Intent - Request to backend
+export interface CreateSupportIntentRequest {
   birdId: string;
   birdAmount: number;
   wihngoSupportAmount: number;
   currency: "USDC";
 }
 
-// Payment Intent - Full response from backend
-export interface PaymentIntent {
+// Support Intent - Full response from backend
+export interface SupportIntent {
   intentId: string;
   birdId: string;
   birdName: string;
@@ -43,7 +43,7 @@ export interface PaymentIntent {
   totalAmount: number;
   currency: string;
   usdcMintAddress: string;
-  status: PaymentIntentStatus;
+  status: SupportIntentStatus;
   serializedTransaction: string;
   solanaSignature?: string;
   expiresAt: string;
@@ -51,7 +51,7 @@ export interface PaymentIntent {
 }
 
 // Mapped response for frontend convenience
-export interface PaymentIntentResponse {
+export interface SupportIntentResponse {
   intentId: string;
   birdWallet: string | null;
   wihngoWallet: string | null;
@@ -61,22 +61,23 @@ export interface PaymentIntentResponse {
 }
 
 // Submit signed transaction
-export interface SubmitPaymentRequest {
+export interface SubmitSupportRequest {
   signedTransaction: string;
 }
 
-export interface SubmitPaymentResponse {
+export interface SubmitSupportResponse {
   intentId: string;
-  status: PaymentIntentStatus;
+  status: SupportIntentStatus;
   solanaSignature?: string;
   message?: string;
 }
 
-// Preflight check before payment
+// Preflight check before support
 export interface PreflightRequest {
   birdId: string;
   birdAmount: number;
   wihngoSupportAmount: number;
+  walletAddress?: string; // Connected Phantom wallet address
 }
 
 export interface PreflightResponse {
@@ -112,10 +113,10 @@ export interface OnChainBalanceResponse {
   minimumSolRequired: number;
 }
 
-// Payment status polling
-export interface PaymentStatus {
+// Support status polling
+export interface SupportStatus {
   intentId: string;
-  status: PaymentIntentStatus;
+  status: SupportIntentStatus;
   birdAmount: number;
   wihngoSupportAmount: number;
   totalAmount: number;
@@ -124,11 +125,11 @@ export interface PaymentStatus {
   confirmedAt?: string;
 }
 
-// Payment history
-export interface PaymentHistoryItem {
-  paymentId: string;
+// Support history
+export interface SupportHistoryItem {
+  supportId: string;
   type: "P2P" | "BIRD_SUPPORT";
-  status: PaymentIntentStatus;
+  status: SupportIntentStatus;
   amount: number;
   currency: string;
   createdAt: string;
@@ -144,8 +145,8 @@ export interface PaymentHistoryItem {
   };
 }
 
-export interface PaymentHistoryResponse {
-  items: PaymentHistoryItem[];
+export interface SupportHistoryResponse {
+  items: SupportHistoryItem[];
   totalCount: number;
   page: number;
   pageSize: number;
@@ -190,12 +191,12 @@ export type TransactionConfirmation = {
   signature: string;
 };
 
-export type ConfirmPaymentRequest = {
+export type ConfirmSupportRequest = {
   intentId: string;
   transactions: TransactionConfirmation[];
 };
 
-export type ConfirmPaymentResponse = {
+export type ConfirmSupportResponse = {
   success: boolean;
   message: string;
 };

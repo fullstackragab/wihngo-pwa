@@ -3,14 +3,14 @@
 import { TopBar } from "./top-bar";
 import { Card } from "./ui/card";
 
-interface HowPaymentsWorkProps {
+interface HowSupportWorksProps {
   onBack: () => void;
 }
 
-export function HowPaymentsWork({ onBack }: HowPaymentsWorkProps) {
+export function HowSupportWorks({ onBack }: HowSupportWorksProps) {
   return (
     <div className="min-h-screen bg-background pb-20">
-      <TopBar title="How Payments Work" onBack={onBack} />
+      <TopBar title="How Support Works" onBack={onBack} />
 
       <div className="max-w-lg mx-auto p-4 space-y-4">
         <div className="space-y-2">
@@ -51,7 +51,7 @@ export function HowPaymentsWork({ onBack }: HowPaymentsWorkProps) {
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Why USDC?</h3>
             <p className="text-muted-foreground leading-relaxed">
-              USDC is a stable digital dollar equal to $1 USD. It enables fast, affordable payments
+              USDC is a stable digital dollar equal to $1 USD. It enables fast, affordable transfers
               without the volatility of traditional cryptocurrencies.
             </p>
           </div>
@@ -74,7 +74,7 @@ export function HowPaymentsWork({ onBack }: HowPaymentsWorkProps) {
                 <span className="text-foreground">~$0.001</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-primary/20">
-                <span className="font-medium text-foreground">Total you pay:</span>
+                <span className="font-medium text-foreground">Total you send:</span>
                 <span className="font-medium text-primary">$3.05</span>
               </div>
               <div className="flex justify-between">

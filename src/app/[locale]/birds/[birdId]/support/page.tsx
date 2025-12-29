@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getBird } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
@@ -17,12 +17,12 @@ import {
   MIN_WIHNGO_SUPPORT,
   MIN_BIRD_AMOUNT,
   MAX_BIRD_AMOUNT,
-} from "@/types/payment";
+} from "@/types/support";
 
-function DonationContent() {
+function SupportContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const birdId = searchParams.get("birdId");
+  const params = useParams();
+  const birdId = params.birdId as string;
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [selectedAmount, setSelectedAmount] = useState<number | null>(1);
@@ -84,7 +84,7 @@ function DonationContent() {
   const handleContinue = () => {
     if (!isValidAmount) return;
     router.push(
-      `/donation/pay?birdId=${birdId}&birdAmount=${birdAmount}&wihngoAmount=${currentWihngoAmount}`
+      `/birds/${birdId}/support/confirm?birdAmount=${birdAmount}&wihngoAmount=${currentWihngoAmount}`
     );
   };
 
@@ -258,22 +258,22 @@ function DonationContent() {
           fullWidth
           size="lg"
         >
-          Continue to Payment
+          Continue
         </Button>
 
         {/* Note */}
         <p className="text-xs text-center text-muted-foreground">
-          Payments are made with USDC on Solana via Phantom Wallet
+          Support is sent via USDC on Solana using Phantom Wallet
         </p>
       </div>
     </div>
   );
 }
 
-export default function DonationPage() {
+export default function SupportPage() {
   return (
     <Suspense fallback={<LoadingScreen />}>
-      <DonationContent />
+      <SupportContent />
     </Suspense>
   );
 }

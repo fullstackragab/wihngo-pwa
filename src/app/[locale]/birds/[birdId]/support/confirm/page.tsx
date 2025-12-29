@@ -1,20 +1,19 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getBird } from "@/services/bird.service";
 import {
   preflightCheck,
-  createPaymentIntent,
-  submitPayment,
-} from "@/services/payment.service";
+  createSupportIntent,
+  submitSupport,
+} from "@/services/support.service";
 import {
   MINIMUM_SOL_FOR_GAS,
-  PaymentIntentResponse,
+  SupportIntentResponse,
   PreflightResponse,
-  SubmitPaymentResponse,
-} from "@/types/payment";
+} from "@/types/support";
 import { useAuth } from "@/contexts/auth-context";
 import { usePhantom } from "@/hooks/use-phantom";
 import { Button } from "@/components/ui/button";
@@ -32,7 +31,7 @@ import {
 import Image from "next/image";
 import { ApiError } from "@/services/api-helper";
 
-type PaymentStep =
+type SupportStep =
   | "connect_wallet"
   | "checking_balance"
   | "insufficient_funds"
@@ -66,10 +65,14 @@ function parseApiError(err: unknown): string {
   return "An unexpected error occurred";
 }
 
-function PaymentContent() {
+function SupportConfirmContent() {
   const router = useRouter();
+  const params = useParams();
   const searchParams = useSearchParams();
-  const birdId = searchParams.get("birdId");
+
+  // Get birdId from route params
+  const birdId = params.birdId as string;
+  // Get amounts from query params
   const birdAmountStr = searchParams.get("birdAmount");
   const wihngoAmountStr = searchParams.get("wihngoAmount");
   const birdAmount = parseFloat(birdAmountStr || "0");
@@ -85,9 +88,9 @@ function PaymentContent() {
     walletAddress,
   } = usePhantom();
 
-  const [step, setStep] = useState<PaymentStep>("connect_wallet");
+  const [step, setStep] = useState<SupportStep>("connect_wallet");
   const [error, setError] = useState<string>("");
-  const [paymentIntent, setPaymentIntent] = useState<PaymentIntentResponse | null>(null);
+  const [supportIntent, setSupportIntent] = useState<SupportIntentResponse | null>(null);
   const [preflightData, setPreflightData] = useState<PreflightResponse | null>(null);
   const [solanaSignature, setSolanaSignature] = useState<string>("");
   const [balanceInfo, setBalanceInfo] = useState<{
@@ -95,24 +98,28 @@ function PaymentContent() {
     usdcBalance: number;
   } | null>(null);
 
+  // Check if this is Wihngo-only support (special case)
+  const isWihngoOnly = birdId === "wihngo" && wihngoAmount > 0;
+
   const { data: bird } = useQuery({
     queryKey: ["bird", birdId],
     queryFn: () => getBird(birdId!),
-    enabled: !!birdId && birdId !== "wihngo" && isAuthenticated,
+    enabled: !!birdId && !isWihngoOnly && isAuthenticated,
   });
 
   const preflightMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (walletAddr: string) =>
       preflightCheck({
         birdId: birdId!,
         birdAmount,
         wihngoSupportAmount: wihngoAmount,
+        walletAddress: walletAddr,
       }),
   });
 
   const createIntentMutation = useMutation({
     mutationFn: () =>
-      createPaymentIntent({
+      createSupportIntent({
         birdId: birdId!,
         birdAmount,
         wihngoAmount,
@@ -121,7 +128,7 @@ function PaymentContent() {
 
   const submitMutation = useMutation({
     mutationFn: (data: { intentId: string; signedTransaction: string }) =>
-      submitPayment(data.intentId, data.signedTransaction),
+      submitSupport(data.intentId, data.signedTransaction),
   });
 
   useEffect(() => {
@@ -145,8 +152,8 @@ function PaymentContent() {
     setError("");
 
     try {
-      // Use preflight endpoint to check if user can make payment
-      const data = await preflightMutation.mutateAsync();
+      // Use preflight endpoint to check if user can support
+      const data = await preflightMutation.mutateAsync(walletAddress);
       setPreflightData(data);
 
       setBalanceInfo({
@@ -157,7 +164,7 @@ function PaymentContent() {
       if (!data.canSupport) {
         // Backend tells us user can't support
         if (data.errorCode) {
-          setError(data.message || "Unable to process payment");
+          setError(data.message || "Unable to process support");
         }
         setStep("insufficient_funds");
       } else {
@@ -181,7 +188,7 @@ function PaymentContent() {
     }
   };
 
-  const handleProceedToPayment = async () => {
+  const handleConfirmSupport = async () => {
     if (!walletAddress) {
       setError("Wallet not connected");
       return;
@@ -191,9 +198,9 @@ function PaymentContent() {
       setError("");
       setStep("creating_intent");
 
-      // Step 1: Create payment intent - backend builds the transaction
+      // Step 1: Create support intent - backend builds the transaction
       const intent = await createIntentMutation.mutateAsync();
-      setPaymentIntent(intent);
+      setSupportIntent(intent);
 
       // Step 2: Sign the transaction with Phantom (just sign, don't send)
       setStep("signing");
@@ -215,22 +222,21 @@ function PaymentContent() {
       if (result.status === "Completed" || result.status === "Confirming" || result.status === "Processing") {
         setStep("success");
       } else if (result.status === "Failed") {
-        setError(result.message || "Payment failed");
+        setError(result.message || "Support failed");
         setStep("error");
       } else {
         // For other statuses, treat as success (backend is processing)
         setStep("success");
       }
     } catch (err) {
-      console.error("Payment error:", err);
+      console.error("Support error:", err);
       setError(parseApiError(err));
       setStep("error");
     }
   };
 
   // Allow bird support (birdAmount > 0) or wihngo-only support (wihngoAmount > 0)
-  const isWihngoOnly = birdId === "wihngo" && wihngoAmount > 0;
-  const isBirdSupport = birdId && birdId !== "wihngo" && birdAmount > 0;
+  const isBirdSupport = birdId && !isWihngoOnly && birdAmount > 0;
 
   // Display name for UI
   const recipientName = isWihngoOnly ? "Wihngo" : (bird?.name || preflightData?.bird?.name || "Bird");
@@ -239,7 +245,7 @@ function PaymentContent() {
     return (
       <div className="min-h-screen-safe flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Invalid payment details</p>
+          <p className="text-muted-foreground mb-4">Invalid support details</p>
           <Button onClick={() => router.push("/birds")}>Browse Birds</Button>
         </div>
       </div>
@@ -272,7 +278,7 @@ function PaymentContent() {
                       Phantom Wallet Required
                     </p>
                     <p className="text-sm text-amber-700 mt-1">
-                      Install Phantom to pay with USDC on Solana.
+                      Install Phantom to send USDC on Solana.
                     </p>
                     <a
                       href="https://phantom.app/"
@@ -371,6 +377,12 @@ function PaymentContent() {
             <div className="space-y-3">
               <Button
                 fullWidth
+                onClick={() => checkBalanceAndProceed()}
+              >
+                Re-check Balance
+              </Button>
+              <Button
+                fullWidth
                 variant="outline"
                 onClick={() => window.open("https://jup.ag/", "_blank")}
               >
@@ -456,7 +468,7 @@ function PaymentContent() {
             <Button
               fullWidth
               size="lg"
-              onClick={handleProceedToPayment}
+              onClick={handleConfirmSupport}
               className="bg-primary hover:bg-primary/90"
             >
               <Heart className="w-5 h-5 mr-2" />
@@ -474,9 +486,9 @@ function PaymentContent() {
           <div className="text-center py-12">
             <LoadingSpinner className="mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-foreground mb-2">
-              Preparing Payment
+              Preparing Support
             </h2>
-            <p className="text-muted-foreground">Setting up your transactions...</p>
+            <p className="text-muted-foreground">Setting up your transaction...</p>
           </div>
         );
 
@@ -498,7 +510,7 @@ function PaymentContent() {
           <div className="text-center py-12">
             <LoadingSpinner className="mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-foreground mb-2">
-              Processing Payment
+              Processing
             </h2>
             <p className="text-muted-foreground">
               Submitting your transaction to the blockchain...
@@ -570,10 +582,10 @@ function PaymentContent() {
             <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
               <XCircle className="w-10 h-10 text-red-600" />
             </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">Payment Failed</h2>
+            <h2 className="text-xl font-bold text-foreground mb-2">Support Failed</h2>
             <p className="text-destructive mb-2">{error}</p>
             <p className="text-sm text-muted-foreground mb-6">
-              Please try again or contact support if the issue persists.
+              Please try again or contact us if the issue persists.
             </p>
 
             <div className="space-y-3">
@@ -608,7 +620,7 @@ function PaymentContent() {
           >
             <ArrowLeft className="w-6 h-6 text-muted-foreground" />
           </button>
-          <h1 className="text-lg font-semibold text-foreground">Complete Payment</h1>
+          <h1 className="text-lg font-semibold text-foreground">Confirm Support</h1>
         </div>
       </header>
 
@@ -652,10 +664,10 @@ function PaymentContent() {
   );
 }
 
-export default function PaymentPage() {
+export default function SupportConfirmPage() {
   return (
     <Suspense fallback={<LoadingScreen />}>
-      <PaymentContent />
+      <SupportConfirmContent />
     </Suspense>
   );
 }

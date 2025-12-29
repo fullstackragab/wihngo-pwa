@@ -16,8 +16,8 @@ export default function SupportWihngoPage() {
   const amountNum = parseFloat(amount) || 0;
 
   const handleSendSupport = () => {
-    // Navigate to payment with wihngo-only support
-    router.push(`/donation/pay?birdId=wihngo&birdAmount=0&wihngoAmount=${amountNum}`);
+    // Navigate to confirm with wihngo-only support
+    router.push(`/birds/wihngo/support/confirm?birdAmount=0&wihngoAmount=${amountNum}`);
   };
 
   return (

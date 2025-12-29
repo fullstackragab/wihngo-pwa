@@ -181,7 +181,7 @@ export default function BirdDetailPage() {
           {/* Support Button */}
           {bird.canSupport !== false && !bird.isMemorial && (
             <div className="pt-4">
-              <Link href={`/donation?birdId=${bird.birdId}`}>
+              <Link href={`/birds/${bird.birdId}/support`}>
                 <Button size="lg" className="w-full rounded-full gap-2">
                   <Heart className="w-4 h-4" />
                   Support {bird.name}

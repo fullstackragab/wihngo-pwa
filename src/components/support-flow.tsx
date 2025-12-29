@@ -5,7 +5,7 @@ import { TopBar } from "./top-bar";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Switch } from "./ui/switch";
-import { PRESET_BIRD_AMOUNTS, DEFAULT_WIHNGO_SUPPORT, MIN_WIHNGO_SUPPORT } from "@/types/payment";
+import { PRESET_BIRD_AMOUNTS, DEFAULT_WIHNGO_SUPPORT, MIN_WIHNGO_SUPPORT } from "@/types/support";
 
 interface SupportFlowProps {
   birdId: string;
@@ -15,7 +15,7 @@ interface SupportFlowProps {
 }
 
 export function SupportFlow({ birdId, birdName, onBack, onComplete }: SupportFlowProps) {
-  const [step, setStep] = useState<"amount" | "wihngo" | "payment" | "confirmation">("amount");
+  const [step, setStep] = useState<"amount" | "wihngo" | "confirm" | "success">("amount");
   const [birdAmount, setBirdAmount] = useState(1);
   const [supportWihngo, setSupportWihngo] = useState(true);
   const [wihngoAmount, setWihngoAmount] = useState(DEFAULT_WIHNGO_SUPPORT);
@@ -136,10 +136,10 @@ export function SupportFlow({ birdId, birdName, onBack, onComplete }: SupportFlo
             </div>
 
             <Button
-              onClick={() => setStep("payment")}
+              onClick={() => setStep("confirm")}
               className="w-full h-12"
             >
-              Continue to Payment
+              Continue
             </Button>
 
             <p className="text-center text-xs text-muted-foreground">
@@ -151,18 +151,18 @@ export function SupportFlow({ birdId, birdName, onBack, onComplete }: SupportFlo
     );
   }
 
-  // Screen 3: Payment
-  if (step === "payment") {
+  // Screen 3: Confirm Support
+  if (step === "confirm") {
     const currentWihngoAmount = supportWihngo ? wihngoAmount : 0;
     const total = birdAmount + currentWihngoAmount;
 
     return (
       <div className="min-h-screen bg-background">
-        <TopBar title="Payment" onBack={() => setStep("wihngo")} />
+        <TopBar title="Confirm" onBack={() => setStep("wihngo")} />
 
         <div className="max-w-lg mx-auto p-6 space-y-8 pt-12">
           <div className="text-center space-y-2">
-            <h2 className="text-foreground text-xl font-medium">Confirm Payment</h2>
+            <h2 className="text-foreground text-xl font-medium">Confirm Support</h2>
             <p className="text-muted-foreground">
               Using USDC on Solana
             </p>
@@ -193,12 +193,12 @@ export function SupportFlow({ birdId, birdName, onBack, onComplete }: SupportFlo
                 Near-zero network costs
               </p>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Payments are processed on Solana for fast, affordable transactions (~$0.001)
+                Transfers are processed on Solana for fast, affordable transactions (~$0.001)
               </p>
             </div>
 
             <Button
-              onClick={() => setStep("confirmation")}
+              onClick={() => setStep("success")}
               className="w-full h-12"
             >
               Send ${total.toFixed(2)}

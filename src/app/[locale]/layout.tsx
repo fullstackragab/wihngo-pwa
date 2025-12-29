@@ -23,7 +23,7 @@ const notoArabic = Noto_Sans_Arabic({
 export const metadata: Metadata = {
   title: "Wihngo - Where Hearts & Wings Gather",
   description:
-    "Support bird conservation through donations and share heartwarming stories",
+    "Support birds and their caretakers, and share heartwarming stories",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -38,13 +38,13 @@ export const metadata: Metadata = {
     siteName: "Wihngo",
     title: "Wihngo - Where Hearts & Wings Gather",
     description:
-      "Support bird conservation through donations and share heartwarming stories",
+      "Support birds and their caretakers, and share heartwarming stories",
   },
   twitter: {
     card: "summary_large_image",
     title: "Wihngo",
     description:
-      "Support bird conservation through donations and share heartwarming stories",
+      "Support birds and their caretakers, and share heartwarming stories",
   },
 };
 

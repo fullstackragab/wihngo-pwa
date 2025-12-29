@@ -39,12 +39,22 @@ export const VALIDATION = {
 };
 
 // Solana configuration
-// Set via env vars or defaults to devnet for development
+// Auto-detect network based on environment: production uses mainnet, development uses devnet
+const isProduction = process.env.NODE_ENV === "production" &&
+  process.env.NEXT_PUBLIC_SOLANA_NETWORK !== "devnet"; // Allow override in production for testing
+
+const defaultNetwork = isProduction ? "mainnet-beta" : "devnet";
+const defaultUsdcMint = isProduction
+  ? "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" // Mainnet USDC
+  : "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"; // Devnet USDC
+
 export const SOLANA_CONFIG = {
-  network: (process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet") as "devnet" | "mainnet-beta",
-  usdcMint: process.env.NEXT_PUBLIC_USDC_MINT || "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
-  // Wihngo platform wallet to receive support payments
+  network: (process.env.NEXT_PUBLIC_SOLANA_NETWORK || defaultNetwork) as "devnet" | "mainnet-beta",
+  usdcMint: process.env.NEXT_PUBLIC_USDC_MINT || defaultUsdcMint,
+  // Wihngo platform wallet to receive platform support
   wihngoWallet: process.env.NEXT_PUBLIC_WIHNGO_WALLET || "6GXVP4mTMNqihNARivweYwc6rtuih1ivoJN7bcAEWWCV",
-  // Mainnet USDC: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
-  // Devnet USDC: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
+  // RPC endpoints
+  rpcUrl: isProduction
+    ? "https://api.mainnet-beta.solana.com"
+    : "https://api.devnet.solana.com",
 };
