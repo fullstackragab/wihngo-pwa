@@ -8,6 +8,7 @@ import { signup } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -18,18 +19,20 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const t = useTranslations("auth");
+  const tCommon = useTranslations("common");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("passwordsNoMatch"));
       return;
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("passwordTooShort"));
       return;
     }
 
@@ -51,7 +54,7 @@ export default function SignupPage() {
       {/* Header */}
       <header className="px-6 py-4 pt-safe">
         <button onClick={() => router.back()} className="text-muted-foreground hover:text-foreground transition-colors">
-          ← Back
+          ← {tCommon("back")}
         </button>
       </header>
 
@@ -68,8 +71,8 @@ export default function SignupPage() {
               className="mx-auto"
             />
             <div>
-              <h1 className="text-2xl font-medium text-foreground">Create account</h1>
-              <p className="text-muted-foreground mt-1">Join our bird-loving community</p>
+              <h1 className="text-2xl font-medium text-foreground">{t("createAccount")}</h1>
+              <p className="text-muted-foreground mt-1">{t("joinCommunity")}</p>
             </div>
           </div>
 
@@ -77,8 +80,8 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               type="text"
-              label="Name"
-              placeholder="Enter your name"
+              label={t("name")}
+              placeholder={t("namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -86,8 +89,8 @@ export default function SignupPage() {
             />
             <Input
               type="email"
-              label="Email"
-              placeholder="Enter your email"
+              label={t("email")}
+              placeholder={t("emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -95,18 +98,18 @@ export default function SignupPage() {
             />
             <Input
               type="password"
-              label="Password"
-              placeholder="Create a password"
+              label={t("password")}
+              placeholder={t("createPassword")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="new-password"
-              helperText="At least 8 characters"
+              helperText={t("atLeast8Chars")}
             />
             <Input
               type="password"
-              label="Confirm Password"
-              placeholder="Confirm your password"
+              label={t("confirmPassword")}
+              placeholder={t("confirmPasswordPlaceholder")}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
@@ -120,26 +123,26 @@ export default function SignupPage() {
             )}
 
             <Button type="submit" fullWidth size="lg" isLoading={isLoading}>
-              Create Account
+              {t("createAccountBtn")}
             </Button>
           </form>
 
           <p className="text-xs text-muted-foreground text-center">
-            By signing up, you agree to our{" "}
+            {t("agreeToTerms")}{" "}
             <Link href="/terms" className="text-primary">
-              Terms of Service
+              {t("termsOfService")}
             </Link>{" "}
-            and{" "}
+            {t("and")}{" "}
             <Link href="/privacy" className="text-primary">
-              Privacy Policy
+              {t("privacyPolicy")}
             </Link>
           </p>
 
           <div className="text-center">
             <p className="text-muted-foreground">
-              Already have an account?{" "}
+              {t("hasAccount")}{" "}
               <Link href="/auth/login" className="text-primary font-medium">
-                Sign in
+                {t("login")}
               </Link>
             </p>
           </div>

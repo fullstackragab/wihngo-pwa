@@ -10,11 +10,13 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, ArrowLeft, Bird } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function BirdsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
+  const t = useTranslations("birds");
 
   // Birds are publicly viewable - "All birds are equal"
   const { data, isLoading, error } = useQuery({
@@ -45,13 +47,13 @@ export default function BirdsPage() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h2>Explore Birds</h2>
+            <h2>{t("exploreBirds")}</h2>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search birds..."
+              placeholder={t("searchBirds")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 rounded-full bg-input-background border-border/50"
@@ -68,18 +70,18 @@ export default function BirdsPage() {
           </div>
         ) : error ? (
           <div className="text-center py-12">
-            <p className="text-destructive">Failed to load birds</p>
+            <p className="text-destructive">{t("loadFailed")}</p>
           </div>
         ) : !birds || birds.length === 0 ? (
           <div className="text-center py-12">
             <Bird className="w-16 h-16 text-muted mx-auto mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">
-              {searchQuery ? "No birds found" : "No birds yet"}
+              {searchQuery ? t("noBirdsFound") : t("noBirdsYet")}
             </h3>
             <p className="text-muted-foreground">
               {searchQuery
-                ? "Try a different search term"
-                : "Check back soon for new birds to support"}
+                ? t("tryDifferentSearch")
+                : t("checkBackSoon")}
             </p>
           </div>
         ) : (
@@ -98,7 +100,7 @@ export default function BirdsPage() {
               onClick={() => setPage((p) => p + 1)}
               className="rounded-full"
             >
-              Load more
+              {t("loadMore")}
             </Button>
           </div>
         )}

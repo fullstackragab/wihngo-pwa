@@ -8,6 +8,7 @@ import { login } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +17,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const t = useTranslations("auth");
+  const tCommon = useTranslations("common");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +41,7 @@ export default function LoginPage() {
       {/* Header */}
       <header className="px-6 py-4 pt-safe">
         <button onClick={() => router.back()} className="text-muted-foreground hover:text-foreground transition-colors">
-          ← Back
+          ← {tCommon("back")}
         </button>
       </header>
 
@@ -55,8 +58,8 @@ export default function LoginPage() {
               className="mx-auto"
             />
             <div>
-              <h1 className="text-2xl font-medium text-foreground">Welcome back</h1>
-              <p className="text-muted-foreground mt-1">Sign in to continue</p>
+              <h1 className="text-2xl font-medium text-foreground">{t("welcomeBack")}</h1>
+              <p className="text-muted-foreground mt-1">{t("signInToContinue")}</p>
             </div>
           </div>
 
@@ -64,8 +67,8 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               type="email"
-              label="Email"
-              placeholder="Enter your email"
+              label={t("email")}
+              placeholder={t("emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -73,8 +76,8 @@ export default function LoginPage() {
             />
             <Input
               type="password"
-              label="Password"
-              placeholder="Enter your password"
+              label={t("password")}
+              placeholder={t("passwordPlaceholder")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -88,21 +91,21 @@ export default function LoginPage() {
             )}
 
             <Button type="submit" fullWidth size="lg" isLoading={isLoading}>
-              Sign In
+              {t("login")}
             </Button>
           </form>
 
           <div className="text-center">
             <Link href="/auth/forgot-password" className="text-sm text-primary">
-              Forgot password?
+              {t("forgotPassword")}
             </Link>
           </div>
 
           <div className="text-center">
             <p className="text-muted-foreground">
-              Don't have an account?{" "}
+              {t("noAccount")}{" "}
               <Link href="/auth/signup" className="text-primary font-medium">
-                Sign up
+                {t("signup")}
               </Link>
             </p>
           </div>

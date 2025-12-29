@@ -8,9 +8,11 @@ import Link from "next/link";
 import { Bird, Heart } from "lucide-react";
 import Image from "next/image";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 export default function HomePage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const t = useTranslations("home");
 
   if (authLoading) {
     return <LoadingScreen />;
@@ -43,9 +45,9 @@ export default function HomePage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
-          <h1 className="mb-2">Wihngo</h1>
+          <h1 className="mb-2">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Helping birds feel safe, fed, and loved.
+            {t("tagline")}
           </p>
         </motion.div>
 
@@ -72,8 +74,7 @@ export default function HomePage() {
           transition={{ delay: 0.8 }}
           className="text-foreground/80 leading-relaxed"
         >
-          Join a community built on sympathy, care, and shared joy for birds.
-          Every bit of support helps a bird feel welcome in this world.
+          {t("description")}
         </motion.p>
 
         {/* CTAs */}
@@ -86,7 +87,7 @@ export default function HomePage() {
           <Link href="/birds" className="w-full">
             <Button size="lg" className="w-full rounded-full gap-2">
               <Heart className="w-4 h-4" />
-              Support a Bird
+              {t("supportBird")}
             </Button>
           </Link>
         </motion.div>
@@ -100,9 +101,9 @@ export default function HomePage() {
             className="pt-2"
           >
             <p className="text-muted-foreground text-sm">
-              Already have an account?{" "}
+              {t("alreadyHaveAccount")}{" "}
               <Link href="/auth/login" className="text-primary font-medium hover:underline">
-                Sign in
+                {t("signIn")}
               </Link>
             </p>
           </motion.div>

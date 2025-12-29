@@ -16,10 +16,12 @@ import {
 import { LanguageSwitcher } from "@/components/language-switcher";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export default function SettingsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const t = useTranslations("settings");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -32,11 +34,11 @@ export default function SettingsPage() {
   }
 
   const settingsItems = [
-    { href: "/settings/notifications", icon: Bell, label: "Notifications" },
-    { href: "/settings/privacy", icon: Shield, label: "Privacy & Security" },
-    { href: "/settings/help", icon: HelpCircle, label: "Help & Support" },
-    { href: "/terms", icon: FileText, label: "Terms of Service" },
-    { href: "/privacy", icon: FileText, label: "Privacy Policy" },
+    { href: "/settings/notifications", icon: Bell, label: t("notifications") },
+    { href: "/settings/privacy", icon: Shield, label: t("privacySecurity") },
+    { href: "/settings/help", icon: HelpCircle, label: t("helpSupport") },
+    { href: "/terms", icon: FileText, label: t("termsOfService") },
+    { href: "/privacy", icon: FileText, label: t("privacyPolicy") },
   ];
 
   return (
@@ -47,7 +49,7 @@ export default function SettingsPage() {
           <button onClick={() => router.back()} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6 text-gray-600" />
           </button>
-          <h1 className="text-xl font-bold text-gray-900">Settings</h1>
+          <h1 className="text-xl font-bold text-gray-900">{t("title")}</h1>
         </div>
       </header>
 
@@ -55,12 +57,12 @@ export default function SettingsPage() {
       <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
         {/* Language Selection */}
         <div>
-          <h3 className="text-sm font-medium text-gray-500 mb-3 px-1">Language</h3>
+          <h3 className="text-sm font-medium text-gray-500 mb-3 px-1">{t("language")}</h3>
           <Card padding="none">
             <div className="flex items-center justify-between px-4 py-3.5">
               <div className="flex items-center gap-3">
                 <Globe className="w-5 h-5 text-gray-500" />
-                <span className="font-medium text-gray-900">Language</span>
+                <span className="font-medium text-gray-900">{t("language")}</span>
               </div>
               <LanguageSwitcher variant="buttons" />
             </div>
@@ -69,7 +71,7 @@ export default function SettingsPage() {
 
         {/* Other Settings */}
         <div>
-          <h3 className="text-sm font-medium text-gray-500 mb-3 px-1">General</h3>
+          <h3 className="text-sm font-medium text-gray-500 mb-3 px-1">{t("general")}</h3>
           <Card padding="none">
             {settingsItems.map((item, index) => (
               <Link key={item.href} href={item.href}>
@@ -91,7 +93,7 @@ export default function SettingsPage() {
 
         {/* App Version */}
         <p className="text-center text-sm text-gray-400 mt-8">
-          Version 1.0.0
+          {t("version")} 1.0.0
         </p>
       </main>
 
