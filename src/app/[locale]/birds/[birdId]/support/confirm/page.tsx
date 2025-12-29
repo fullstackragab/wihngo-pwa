@@ -33,31 +33,7 @@ import {
 import Image from "next/image";
 import { ApiError } from "@/services/api-helper";
 import { isMobileDevice, detectPlatform } from "@/lib/phantom/platform";
-import nacl from "tweetnacl";
-import bs58 from "bs58";
-
-// Storage keys for mobile deep link flow (must match use-phantom.ts)
-const PHANTOM_CONNECT_PENDING_KEY = "phantom_connect_pending";
-const PHANTOM_DAPP_KEYPAIR_KEY = "phantom_dapp_keypair";
-const PHANTOM_CONNECTION_ID_KEY = "phantom_connection_id";
-
-// Initialize connection on server (generates keypair server-side)
-async function initServerConnection(): Promise<{ connectionId: string; dappPublicKey: string } | null> {
-  try {
-    const response = await fetch("/api/phantom", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return await response.json();
-  } catch {
-    return null;
-  }
-}
+import { getStoredIntentId, clearStoredIntent } from "@/services/wallet-connect.service";
 
 type SupportStep =
   | "connect_wallet"
@@ -177,46 +153,27 @@ function SupportConfirmContent() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Helper to clean up all Phantom storage
-  const cleanupPhantomStorage = () => {
-    localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-    localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
-    localStorage.removeItem(PHANTOM_CONNECTION_ID_KEY);
-    localStorage.removeItem("phantom_return_url");
-    localStorage.removeItem("phantom_wallet_address");
-    sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
-    sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
-    sessionStorage.removeItem(PHANTOM_CONNECTION_ID_KEY);
-  };
-
-  // Check for pending Phantom mobile connection on mount
+  // Check for pending wallet connect intent on mount
   useEffect(() => {
-    if (typeof localStorage === "undefined") return;
-
-    // Check localStorage (persists across browser contexts)
-    const pendingTimestamp = localStorage.getItem(PHANTOM_CONNECT_PENDING_KEY) ||
-                             sessionStorage.getItem(PHANTOM_CONNECT_PENDING_KEY);
-    if (pendingTimestamp) {
-      const elapsed = Date.now() - parseInt(pendingTimestamp, 10);
-      // If pending for less than 5 minutes, show waiting state
-      if (elapsed < 5 * 60 * 1000) {
-        setStep("waiting_for_phantom");
-        // If wallet is now connected, clear pending and proceed
-        if (isConnected && walletAddress) {
-          cleanupPhantomStorage();
-          linkWallet(walletAddress)
-            .then(() => checkBalanceAndProceed())
-            .catch((err) => {
-              console.warn("Wallet link failed, proceeding anyway:", err);
-              checkBalanceAndProceed();
-            });
-        }
-      } else {
-        // Pending expired, clear it
-        cleanupPhantomStorage();
-      }
+    const pendingIntentId = getStoredIntentId();
+    if (pendingIntentId && !isConnected) {
+      // Show waiting state while checking for callback
+      setStep("waiting_for_phantom");
     }
-  }, [isConnected, walletAddress]);
+  }, []);
+
+  // When wallet connects, clear pending state and proceed
+  useEffect(() => {
+    if (isConnected && walletAddress && step === "waiting_for_phantom") {
+      clearStoredIntent();
+      linkWallet(walletAddress)
+        .then(() => checkBalanceAndProceed())
+        .catch((err) => {
+          console.warn("Wallet link failed, proceeding anyway:", err);
+          checkBalanceAndProceed();
+        });
+    }
+  }, [isConnected, walletAddress, step]);
 
   // Auto-advance if wallet is already connected and amounts are valid
   useEffect(() => {
@@ -225,11 +182,9 @@ function SupportConfirmContent() {
 
     // Wait for amounts to be parsed from URL
     const hasValidAmounts = totalAmount > 0;
-    // Also handle the case where we're waiting for Phantom and the wallet connected
-    if (isConnected && walletAddress && (step === "connect_wallet" || step === "waiting_for_phantom") && hasValidAmounts) {
-      // Clear any pending mobile state
-      cleanupPhantomStorage();
-      // Ensure wallet is linked to backend, then proceed
+    // Auto-advance when wallet is connected
+    if (isConnected && walletAddress && step === "connect_wallet" && hasValidAmounts) {
+      clearStoredIntent();
       linkWallet(walletAddress)
         .then(() => checkBalanceAndProceed())
         .catch((err) => {
@@ -307,9 +262,8 @@ function SupportConfirmContent() {
     } catch (err) {
       console.error("Wallet connection error:", err);
       // On mobile, don't show error if we're in the middle of a redirect flow
-      const isPendingMobile = (typeof localStorage !== "undefined" && localStorage.getItem(PHANTOM_CONNECT_PENDING_KEY)) ||
-        (typeof sessionStorage !== "undefined" && sessionStorage.getItem(PHANTOM_CONNECT_PENDING_KEY));
-      if (isPendingMobile && isMobile) {
+      const pendingIntentId = getStoredIntentId();
+      if (pendingIntentId && isMobile) {
         setStep("waiting_for_phantom");
         return;
       }
@@ -443,6 +397,7 @@ function SupportConfirmContent() {
       case "waiting_for_phantom": {
         const platform = detectPlatform();
         const isPWA = platform === "mobile-pwa";
+        const isMobile = isMobileDevice();
 
         return (
           <div className="space-y-6">
@@ -454,7 +409,7 @@ function SupportConfirmContent() {
               <p className="text-muted-foreground">
                 Please approve the connection request in the Phantom app.
               </p>
-              {isPWA ? (
+              {isMobile && (
                 <Card variant="outlined" padding="md" className="mt-4 bg-secondary/50 text-left">
                   <div className="flex gap-3">
                     <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
@@ -463,15 +418,13 @@ function SupportConfirmContent() {
                         After approving in Phantom
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        You may be redirected to Safari. Simply return to this app from your home screen to continue.
+                        {isPWA
+                          ? "You may be redirected to another browser. Simply return to this app from your home screen to continue."
+                          : "Return here after approving the connection."}
                       </p>
                     </div>
                   </div>
                 </Card>
-              ) : (
-                <p className="text-sm text-muted-foreground mt-4">
-                  Return here after approving in Phantom.
-                </p>
               )}
             </div>
 
@@ -479,36 +432,9 @@ function SupportConfirmContent() {
               <Button
                 fullWidth
                 variant="outline"
-                onClick={async () => {
-                  // Try server-side keypair generation first (for cross-browser support)
-                  const serverInit = await initServerConnection();
-
-                  let dappPublicKeyBase58: string;
-
-                  if (serverInit) {
-                    // Server-side keypair - works across browsers
-                    dappPublicKeyBase58 = serverInit.dappPublicKey;
-                    localStorage.setItem(PHANTOM_CONNECTION_ID_KEY, serverInit.connectionId);
-                  } else {
-                    // Fallback to local keypair generation
-                    const dappKeyPair = nacl.box.keyPair();
-                    dappPublicKeyBase58 = bs58.encode(dappKeyPair.publicKey);
-                    const dappSecretKeyBase58 = bs58.encode(dappKeyPair.secretKey);
-                    localStorage.setItem(PHANTOM_DAPP_KEYPAIR_KEY, dappSecretKeyBase58);
-                  }
-
-                  localStorage.setItem(PHANTOM_CONNECT_PENDING_KEY, Date.now().toString());
-                  localStorage.setItem("phantom_return_url", window.location.href);
-
-                  // Build redirect URL with connection_id
-                  const currentUrl = new URL(window.location.href);
-                  if (serverInit?.connectionId) {
-                    currentUrl.searchParams.set("phantom_connection_id", serverInit.connectionId);
-                  }
-                  const redirectUrl = encodeURIComponent(currentUrl.toString());
-                  const appUrl = encodeURIComponent(window.location.origin);
-
-                  window.location.href = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&dapp_encryption_public_key=${dappPublicKeyBase58}&redirect_link=${redirectUrl}&cluster=mainnet-beta`;
+                onClick={() => {
+                  // Re-trigger connect flow via the hook
+                  connect();
                 }}
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
@@ -518,7 +444,7 @@ function SupportConfirmContent() {
                 fullWidth
                 variant="ghost"
                 onClick={() => {
-                  cleanupPhantomStorage();
+                  clearStoredIntent();
                   setStep("connect_wallet");
                   setError("");
                 }}
