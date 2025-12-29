@@ -12,6 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { formatDistanceToNow } from "date-fns";
+import { useTranslations } from "next-intl";
 
 export default function MemorialPage() {
   const params = useParams();
@@ -20,6 +21,9 @@ export default function MemorialPage() {
   const { user, isAuthenticated } = useAuth();
   const birdId = params.birdId as string;
   const [message, setMessage] = useState("");
+  const t = useTranslations("memorial");
+  const tBirds = useTranslations("birds");
+  const tAuth = useTranslations("auth");
 
   const { data: bird, isLoading: birdLoading } = useQuery({
     queryKey: ["bird", birdId],
@@ -63,8 +67,8 @@ export default function MemorialPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-destructive mb-4">Bird not found</p>
-          <Button onClick={() => router.back()}>Go Back</Button>
+          <p className="text-destructive mb-4">{tBirds("birdNotFound")}</p>
+          <Button onClick={() => router.back()}>{tBirds("goBack")}</Button>
         </div>
       </div>
     );
@@ -74,9 +78,9 @@ export default function MemorialPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">This bird does not have a memorial page</p>
+          <p className="text-muted-foreground mb-4">{t("noMemorial")}</p>
           <Link href={`/birds/${birdId}`}>
-            <Button>View Bird Profile</Button>
+            <Button>{t("viewBirdProfile")}</Button>
           </Link>
         </div>
       </div>
@@ -121,7 +125,7 @@ export default function MemorialPage() {
               </div>
             )}
             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-foreground/80 text-card px-4 py-1 rounded-full text-sm whitespace-nowrap">
-              In Loving Memory
+              {t("inLovingMemory")}
             </div>
           </div>
 
@@ -144,13 +148,13 @@ export default function MemorialPage() {
               <div className="text-center">
                 <Users className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  {memorial.totalSupporters} supporters
+                  {memorial.totalSupporters} {t("supporters")}
                 </p>
               </div>
               <div className="text-center">
                 <Heart className="w-5 h-5 mx-auto mb-1 text-primary" />
                 <p className="text-sm text-muted-foreground">
-                  ${memorial.totalSupport?.toFixed(2) || '0.00'} raised
+                  ${memorial.totalSupport?.toFixed(2) || '0.00'} {t("raised")}
                 </p>
               </div>
             </div>
@@ -165,11 +169,10 @@ export default function MemorialPage() {
           className="bg-card rounded-2xl border border-border/50 p-6 mb-6"
         >
           <p className="text-foreground/80 text-center leading-relaxed">
-            {bird.name} touched many hearts during their time with us.
-            Your support made a real difference in their care and comfort.
+            {t("touchedHearts", { name: bird.name })}
           </p>
           <p className="text-muted-foreground text-sm text-center mt-4 italic">
-            &ldquo;Life cannot be guaranteed — care always is.&rdquo;
+            &ldquo;{t("careQuote")}&rdquo;
           </p>
         </motion.div>
 
@@ -180,7 +183,7 @@ export default function MemorialPage() {
           transition={{ delay: 0.2 }}
           className="space-y-4"
         >
-          <h2 className="font-medium text-foreground">Tributes</h2>
+          <h2 className="font-medium text-foreground">{t("tributes")}</h2>
 
           {/* Post Tribute Form */}
           {isAuthenticated ? (
@@ -189,7 +192,7 @@ export default function MemorialPage() {
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder={`Share a memory or tribute for ${bird.name}...`}
+                  placeholder={t("shareTribute", { name: bird.name })}
                   className="w-full bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground min-h-[80px]"
                   maxLength={500}
                 />
@@ -208,7 +211,7 @@ export default function MemorialPage() {
                     ) : (
                       <Send className="w-4 h-4" />
                     )}
-                    Post Tribute
+                    {t("postTribute")}
                   </Button>
                 </div>
               </div>
@@ -216,11 +219,11 @@ export default function MemorialPage() {
           ) : (
             <div className="bg-muted/50 rounded-2xl p-4 text-center mb-6">
               <p className="text-sm text-muted-foreground mb-2">
-                Sign in to share a tribute
+                {t("signInToShare")}
               </p>
               <Link href="/auth/login">
                 <Button variant="outline" size="sm" className="rounded-full">
-                  Sign In
+                  {tAuth("login")}
                 </Button>
               </Link>
             </div>
@@ -234,7 +237,7 @@ export default function MemorialPage() {
           ) : !messages || messages.length === 0 ? (
             <div className="bg-card rounded-2xl border border-border/50 text-center py-8">
               <p className="text-muted-foreground">
-                Be the first to share a tribute for {bird.name}
+                {t("beFirstTribute", { name: bird.name })}
               </p>
             </div>
           ) : (
@@ -291,7 +294,7 @@ export default function MemorialPage() {
         >
           <Link href={`/birds/${birdId}`}>
             <Button variant="outline" className="rounded-full">
-              View {bird.name}&apos;s Profile
+              {t("viewProfile", { name: bird.name })}
             </Button>
           </Link>
         </motion.div>

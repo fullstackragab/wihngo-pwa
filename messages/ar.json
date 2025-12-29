@@ -361,7 +361,40 @@
     "confirmNewPassword": "تأكيد كلمة المرور الجديدة",
     "resetPassword": "إعادة تعيين كلمة المرور",
     "passwordReset": "تم إعادة تعيين كلمة المرور!",
-    "passwordResetSuccess": "تم إعادة تعيين كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة."
+    "passwordResetSuccess": "تم إعادة تعيين كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.",
+    "backToLogin": "العودة لتسجيل الدخول",
+    "passwordRequirements": "متطلبات كلمة المرور:",
+    "req8to128": "8-128 حرف",
+    "reqUppercase": "حرف كبير واحد (A-Z)",
+    "reqLowercase": "حرف صغير واحد (a-z)",
+    "reqNumber": "رقم واحد (0-9)",
+    "reqSpecial": "رمز خاص واحد (!@#$%^&*...)",
+    "passwordNotMeetReq": "كلمة المرور لا تستوفي جميع المتطلبات"
+  },
+  "memorial": {
+    "inLovingMemory": "في ذكرى محبة",
+    "touchedHearts": "{name} لمس قلوب كثيرة خلال وقته معنا. دعمك أحدث فرقًا حقيقيًا في رعايته وراحته.",
+    "careQuote": "الحياة لا يمكن ضمانها - الرعاية دائمًا موجودة.",
+    "tributes": "التحيات",
+    "shareTribute": "شارك ذكرى أو تحية لـ {name}...",
+    "postTribute": "نشر تحية",
+    "signInToShare": "سجّل الدخول لمشاركة تحية",
+    "beFirstTribute": "كن أول من يشارك تحية لـ {name}",
+    "supporters": "داعم",
+    "raised": "تم جمعه",
+    "viewProfile": "عرض ملف {name}",
+    "noMemorial": "هذا الطائر ليس لديه صفحة تذكارية",
+    "viewBirdProfile": "عرض ملف الطائر"
+  },
+  "editProfile": {
+    "title": "تعديل الملف الشخصي",
+    "changePhoto": "تغيير الصورة",
+    "bio": "نبذة",
+    "bioPlaceholder": "أخبرنا عن نفسك...",
+    "saveChanges": "حفظ التغييرات",
+    "yourName": "اسمك",
+    "validImageError": "يرجى اختيار صورة صالحة (JPEG أو PNG أو WebP)",
+    "imageSizeError": "يجب أن تكون الصورة أصغر من {size} ميغابايت"
   },
   "settings": {
     "title": "الإعدادات",

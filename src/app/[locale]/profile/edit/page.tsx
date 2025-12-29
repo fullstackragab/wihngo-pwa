@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { updateProfile, uploadProfileImage } from "@/services/user.service";
 import { IMAGE_CONFIG } from "@/lib/config";
+import { useTranslations } from "next-intl";
 
 export default function EditProfilePage() {
   const { user, isAuthenticated, isLoading: authLoading, updateUser } = useAuth();
@@ -21,6 +22,8 @@ export default function EditProfilePage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations("editProfile");
+  const tAuth = useTranslations("auth");
 
   useEffect(() => {
     if (user) {
@@ -58,13 +61,13 @@ export default function EditProfilePage() {
 
     // Validate file type
     if (!IMAGE_CONFIG.allowedTypes.includes(file.type)) {
-      setError("Please select a valid image (JPEG, PNG, or WebP)");
+      setError(t("validImageError"));
       return;
     }
 
     // Validate file size
     if (file.size > IMAGE_CONFIG.maxSizeBytes) {
-      setError(`Image must be smaller than ${IMAGE_CONFIG.maxSizeBytes / 1024 / 1024}MB`);
+      setError(t("imageSizeError", { size: (IMAGE_CONFIG.maxSizeBytes / 1024 / 1024).toString() }));
       return;
     }
 
@@ -119,7 +122,7 @@ export default function EditProfilePage() {
           <button onClick={() => router.back()} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6 text-muted-foreground" />
           </button>
-          <h1 className="text-xl font-bold text-foreground">Edit Profile</h1>
+          <h1 className="text-xl font-bold text-foreground">{t("title")}</h1>
         </div>
       </header>
 
@@ -166,7 +169,7 @@ export default function EditProfilePage() {
               onClick={handleImageClick}
               className="text-sm text-primary hover:underline"
             >
-              Change photo
+              {t("changePhoto")}
             </button>
           </div>
 
@@ -181,20 +184,20 @@ export default function EditProfilePage() {
           <Card variant="outlined" padding="md">
             <div className="space-y-4">
               <Input
-                label="Name"
+                label={tAuth("name")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
+                placeholder={t("yourName")}
                 required
               />
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">
-                  Bio
+                  {t("bio")}
                 </label>
                 <textarea
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  placeholder="Tell us about yourself..."
+                  placeholder={t("bioPlaceholder")}
                   rows={4}
                   className="w-full px-4 py-3 rounded-xl border border-border bg-input-background focus:bg-card focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary transition-all resize-none text-foreground placeholder:text-muted-foreground"
                   maxLength={500}
@@ -208,7 +211,7 @@ export default function EditProfilePage() {
 
           {/* Submit Button */}
           <Button type="submit" fullWidth isLoading={isSaving}>
-            Save Changes
+            {t("saveChanges")}
           </Button>
         </form>
       </main>

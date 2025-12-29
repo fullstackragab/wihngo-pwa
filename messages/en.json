@@ -361,7 +361,40 @@
     "confirmNewPassword": "Confirm new password",
     "resetPassword": "Reset Password",
     "passwordReset": "Password Reset!",
-    "passwordResetSuccess": "Your password has been successfully reset. You can now sign in with your new password."
+    "passwordResetSuccess": "Your password has been successfully reset. You can now sign in with your new password.",
+    "backToLogin": "Back to Login",
+    "passwordRequirements": "Password requirements:",
+    "req8to128": "8-128 characters",
+    "reqUppercase": "One uppercase letter (A-Z)",
+    "reqLowercase": "One lowercase letter (a-z)",
+    "reqNumber": "One number (0-9)",
+    "reqSpecial": "One special character (!@#$%^&*...)",
+    "passwordNotMeetReq": "Password does not meet all requirements"
+  },
+  "memorial": {
+    "inLovingMemory": "In Loving Memory",
+    "touchedHearts": "{name} touched many hearts during their time with us. Your support made a real difference in their care and comfort.",
+    "careQuote": "Life cannot be guaranteed — care always is.",
+    "tributes": "Tributes",
+    "shareTribute": "Share a memory or tribute for {name}...",
+    "postTribute": "Post Tribute",
+    "signInToShare": "Sign in to share a tribute",
+    "beFirstTribute": "Be the first to share a tribute for {name}",
+    "supporters": "supporters",
+    "raised": "raised",
+    "viewProfile": "View {name}'s Profile",
+    "noMemorial": "This bird does not have a memorial page",
+    "viewBirdProfile": "View Bird Profile"
+  },
+  "editProfile": {
+    "title": "Edit Profile",
+    "changePhoto": "Change photo",
+    "bio": "Bio",
+    "bioPlaceholder": "Tell us about yourself...",
+    "saveChanges": "Save Changes",
+    "yourName": "Your name",
+    "validImageError": "Please select a valid image (JPEG, PNG, or WebP)",
+    "imageSizeError": "Image must be smaller than {size}MB"
   },
   "settings": {
     "title": "Settings",

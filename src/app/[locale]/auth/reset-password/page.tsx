@@ -7,18 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KeyRound, CheckCircle, AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { API_URL } from "@/lib/config";
-
-const PASSWORD_REQUIREMENTS = [
-  { label: "8-128 characters", test: (p: string) => p.length >= 8 && p.length <= 128 },
-  { label: "One uppercase letter (A-Z)", test: (p: string) => /[A-Z]/.test(p) },
-  { label: "One lowercase letter (a-z)", test: (p: string) => /[a-z]/.test(p) },
-  { label: "One number (0-9)", test: (p: string) => /[0-9]/.test(p) },
-  { label: "One special character (!@#$%^&*...)", test: (p: string) => /[!@#$%^&*()_+\-=\[\]{}';:"|,.<>/?\\]/.test(p) },
-];
+import { useTranslations } from "next-intl";
 
 function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("auth");
+  const tCommon = useTranslations("common");
 
   const email = searchParams.get("email") || "";
   const token = searchParams.get("token") || "";
@@ -33,6 +28,14 @@ function ResetPasswordContent() {
 
   const isValidLink = email && token;
 
+  const PASSWORD_REQUIREMENTS = [
+    { label: t("req8to128"), test: (p: string) => p.length >= 8 && p.length <= 128 },
+    { label: t("reqUppercase"), test: (p: string) => /[A-Z]/.test(p) },
+    { label: t("reqLowercase"), test: (p: string) => /[a-z]/.test(p) },
+    { label: t("reqNumber"), test: (p: string) => /[0-9]/.test(p) },
+    { label: t("reqSpecial"), test: (p: string) => /[!@#$%^&*()_+\-=\[\]{}';:"|,.<>/?\\]/.test(p) },
+  ];
+
   const passwordsMatch = newPassword === confirmPassword;
   const allRequirementsMet = PASSWORD_REQUIREMENTS.every(req => req.test(newPassword));
 
@@ -41,12 +44,12 @@ function ResetPasswordContent() {
     setError("");
 
     if (!passwordsMatch) {
-      setError("Passwords do not match");
+      setError(t("passwordsNoMatch"));
       return;
     }
 
     if (!allRequirementsMet) {
-      setError("Password does not meet all requirements");
+      setError(t("passwordNotMeetReq"));
       return;
     }
 
@@ -89,7 +92,7 @@ function ResetPasswordContent() {
       <div className="min-h-screen-safe flex flex-col">
         <header className="px-6 py-4 pt-safe">
           <button onClick={() => router.push("/auth/login")} className="text-muted-foreground hover:text-foreground transition-colors">
-            ← Back to Login
+            ← {t("backToLogin")}
           </button>
         </header>
 
@@ -100,16 +103,16 @@ function ResetPasswordContent() {
                 <AlertCircle className="w-8 h-8 text-destructive" />
               </div>
               <div>
-                <h1 className="text-2xl font-medium text-foreground">Invalid Reset Link</h1>
+                <h1 className="text-2xl font-medium text-foreground">{t("invalidResetLink")}</h1>
                 <p className="text-muted-foreground mt-2">
-                  This password reset link is invalid or has expired. Please request a new one.
+                  {t("invalidResetLinkDesc")}
                 </p>
               </div>
             </div>
 
             <Link href="/auth/forgot-password" className="block">
               <Button fullWidth size="lg">
-                Request New Link
+                {t("requestNewLink")}
               </Button>
             </Link>
           </div>
@@ -124,7 +127,7 @@ function ResetPasswordContent() {
       <div className="min-h-screen-safe flex flex-col">
         <header className="px-6 py-4 pt-safe">
           <button onClick={() => router.push("/auth/login")} className="text-muted-foreground hover:text-foreground transition-colors">
-            ← Back to Login
+            ← {t("backToLogin")}
           </button>
         </header>
 
@@ -135,16 +138,16 @@ function ResetPasswordContent() {
                 <CheckCircle className="w-8 h-8 text-success" />
               </div>
               <div>
-                <h1 className="text-2xl font-medium text-foreground">Password Reset!</h1>
+                <h1 className="text-2xl font-medium text-foreground">{t("passwordReset")}</h1>
                 <p className="text-muted-foreground mt-2">
-                  Your password has been successfully reset. You can now sign in with your new password.
+                  {t("passwordResetSuccess")}
                 </p>
               </div>
             </div>
 
             <Link href="/auth/login" className="block">
               <Button fullWidth size="lg">
-                Sign In
+                {t("login")}
               </Button>
             </Link>
           </div>
@@ -158,7 +161,7 @@ function ResetPasswordContent() {
     <div className="min-h-screen-safe flex flex-col">
       <header className="px-6 py-4 pt-safe">
         <button onClick={() => router.back()} className="text-muted-foreground hover:text-foreground transition-colors">
-          ← Back
+          ← {tCommon("back")}
         </button>
       </header>
 
@@ -169,9 +172,9 @@ function ResetPasswordContent() {
               <KeyRound className="w-8 h-8 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-medium text-foreground">Set new password</h1>
+              <h1 className="text-2xl font-medium text-foreground">{t("setNewPassword")}</h1>
               <p className="text-muted-foreground mt-1">
-                Create a strong password for your account
+                {t("setNewPasswordDesc")}
               </p>
             </div>
           </div>
@@ -180,8 +183,8 @@ function ResetPasswordContent() {
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
-                label="New Password"
-                placeholder="Enter new password"
+                label={t("newPassword")}
+                placeholder={t("newPasswordPlaceholder")}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
@@ -199,13 +202,13 @@ function ResetPasswordContent() {
             <div className="relative">
               <Input
                 type={showConfirmPassword ? "text" : "password"}
-                label="Confirm Password"
-                placeholder="Confirm new password"
+                label={t("confirmPassword")}
+                placeholder={t("confirmNewPassword")}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 autoComplete="new-password"
-                error={confirmPassword && !passwordsMatch ? "Passwords do not match" : undefined}
+                error={confirmPassword && !passwordsMatch ? t("passwordsNoMatch") : undefined}
               />
               <button
                 type="button"
@@ -219,7 +222,7 @@ function ResetPasswordContent() {
             {/* Password Requirements */}
             {newPassword && (
               <div className="bg-secondary/50 rounded-2xl p-4 space-y-2">
-                <p className="text-sm font-medium text-foreground">Password requirements:</p>
+                <p className="text-sm font-medium text-foreground">{t("passwordRequirements")}</p>
                 <ul className="space-y-1">
                   {PASSWORD_REQUIREMENTS.map((req, index) => {
                     const passed = req.test(newPassword);
@@ -251,13 +254,13 @@ function ResetPasswordContent() {
               isLoading={isLoading}
               disabled={!allRequirementsMet || !passwordsMatch || !newPassword || !confirmPassword}
             >
-              Reset Password
+              {t("resetPassword")}
             </Button>
           </form>
 
           <div className="text-center">
             <Link href="/auth/login" className="text-sm text-primary">
-              Back to Sign In
+              {t("backToSignIn")}
             </Link>
           </div>
         </div>
