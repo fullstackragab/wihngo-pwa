@@ -263,6 +263,10 @@ export function usePhantom(): UsePhantomResult {
           setPublicKey(pubKey);
           setIsConnected(true);
           setConnectionMethod("sdk");
+          // Clear any pending state
+          if (typeof sessionStorage !== "undefined") {
+            sessionStorage.removeItem("phantom_connect_pending");
+          }
           return pubKey;
         }
       } catch (err) {
@@ -291,6 +295,12 @@ export function usePhantom(): UsePhantomResult {
       const appUrl = encodeURIComponent(window.location.origin);
       const redirectUrl = encodeURIComponent(currentUrl);
 
+      // Mark that we're waiting for Phantom to respond
+      // This prevents showing errors when the user returns before completing
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem("phantom_connect_pending", Date.now().toString());
+      }
+
       // Use Phantom Universal Link for mobile
       // This will open the Phantom app if installed, or redirect to app store
       const phantomConnectUrl = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&redirect_link=${redirectUrl}&cluster=mainnet-beta`;
@@ -299,6 +309,7 @@ export function usePhantom(): UsePhantomResult {
       window.location.href = phantomConnectUrl;
 
       // Return null - the app will redirect back after connection
+      // Don't throw an error - this is expected behavior for mobile deep links
       return null;
     }
 

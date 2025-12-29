@@ -32,9 +32,11 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { ApiError } from "@/services/api-helper";
+import { isMobileDevice } from "@/lib/phantom/platform";
 
 type SupportStep =
   | "connect_wallet"
+  | "waiting_for_phantom"
   | "checking_balance"
   | "insufficient_funds"
   | "validation_failed"
@@ -138,6 +140,8 @@ function SupportConfirmContent() {
       submitSupport(data.intentId, data.signedTransaction),
   });
 
+  const isMobile = isMobileDevice();
+
   useEffect(() => {
     // Wait for auth to load before checking
     if (authLoading) return;
@@ -148,6 +152,33 @@ function SupportConfirmContent() {
     }
   }, [authLoading, isAuthenticated, router]);
 
+  // Check for pending Phantom mobile connection on mount
+  useEffect(() => {
+    if (typeof sessionStorage === "undefined") return;
+
+    const pendingTimestamp = sessionStorage.getItem("phantom_connect_pending");
+    if (pendingTimestamp) {
+      const elapsed = Date.now() - parseInt(pendingTimestamp, 10);
+      // If pending for less than 5 minutes, show waiting state
+      if (elapsed < 5 * 60 * 1000) {
+        setStep("waiting_for_phantom");
+        // If wallet is now connected, clear pending and proceed
+        if (isConnected && walletAddress) {
+          sessionStorage.removeItem("phantom_connect_pending");
+          linkWallet(walletAddress)
+            .then(() => checkBalanceAndProceed())
+            .catch((err) => {
+              console.warn("Wallet link failed, proceeding anyway:", err);
+              checkBalanceAndProceed();
+            });
+        }
+      } else {
+        // Pending expired, clear it
+        sessionStorage.removeItem("phantom_connect_pending");
+      }
+    }
+  }, [isConnected, walletAddress]);
+
   // Auto-advance if wallet is already connected and amounts are valid
   useEffect(() => {
     // Wait for auth to load first
@@ -155,7 +186,12 @@ function SupportConfirmContent() {
 
     // Wait for amounts to be parsed from URL
     const hasValidAmounts = totalAmount > 0;
-    if (isConnected && walletAddress && step === "connect_wallet" && hasValidAmounts) {
+    // Also handle the case where we're waiting for Phantom and the wallet connected
+    if (isConnected && walletAddress && (step === "connect_wallet" || step === "waiting_for_phantom") && hasValidAmounts) {
+      // Clear any pending mobile state
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.removeItem("phantom_connect_pending");
+      }
       // Ensure wallet is linked to backend, then proceed
       linkWallet(walletAddress)
         .then(() => checkBalanceAndProceed())
@@ -224,10 +260,22 @@ function SupportConfirmContent() {
       if (publicKey) {
         // Link wallet to user account in backend
         await linkWallet(publicKey.toBase58());
+      } else if (isMobile) {
+        // On mobile, connect() returns null because it redirects to Phantom app
+        // Set waiting state - the page will reload when user returns
+        setStep("waiting_for_phantom");
+        return; // Don't show error, this is expected
       }
       // useEffect will handle the rest when isConnected changes
     } catch (err) {
       console.error("Wallet connection error:", err);
+      // On mobile, don't show error if we're in the middle of a redirect flow
+      const isPendingMobile = typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("phantom_connect_pending");
+      if (isPendingMobile && isMobile) {
+        setStep("waiting_for_phantom");
+        return;
+      }
       setError(err instanceof Error ? err.message : "Failed to connect wallet");
     }
   };
@@ -352,6 +400,52 @@ function SupportConfirmContent() {
             {error && (
               <p className="text-sm text-destructive text-center">{error}</p>
             )}
+          </div>
+        );
+
+      case "waiting_for_phantom":
+        return (
+          <div className="space-y-6">
+            <div className="text-center py-8">
+              <LoadingSpinner className="mx-auto mb-4" />
+              <h2 className="text-lg font-semibold text-foreground mb-2">
+                Waiting for Phantom
+              </h2>
+              <p className="text-muted-foreground">
+                Please approve the connection request in the Phantom app.
+              </p>
+              <p className="text-sm text-muted-foreground mt-4">
+                Return here after approving in Phantom.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <Button
+                fullWidth
+                variant="outline"
+                onClick={() => {
+                  // Try to open Phantom again
+                  const currentUrl = window.location.href;
+                  const appUrl = encodeURIComponent(window.location.origin);
+                  const redirectUrl = encodeURIComponent(currentUrl);
+                  window.location.href = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&redirect_link=${redirectUrl}&cluster=mainnet-beta`;
+                }}
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Open Phantom App
+              </Button>
+              <Button
+                fullWidth
+                variant="ghost"
+                onClick={() => {
+                  sessionStorage.removeItem("phantom_connect_pending");
+                  setStep("connect_wallet");
+                  setError("");
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
         );
 
@@ -699,7 +793,8 @@ function SupportConfirmContent() {
             disabled={
               step === "signing" ||
               step === "submitting" ||
-              step === "creating_intent"
+              step === "creating_intent" ||
+              step === "waiting_for_phantom"
             }
           >
             <ArrowLeft className="w-6 h-6 text-muted-foreground" />
