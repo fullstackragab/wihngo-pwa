@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { ApiError } from "@/services/api-helper";
-import { isMobileDevice } from "@/lib/phantom/platform";
+import { isMobileDevice, detectPlatform } from "@/lib/phantom/platform";
 import nacl from "tweetnacl";
 import bs58 from "bs58";
 
@@ -160,9 +160,11 @@ function SupportConfirmContent() {
 
   // Check for pending Phantom mobile connection on mount
   useEffect(() => {
-    if (typeof sessionStorage === "undefined") return;
+    if (typeof localStorage === "undefined") return;
 
-    const pendingTimestamp = sessionStorage.getItem(PHANTOM_CONNECT_PENDING_KEY);
+    // Check localStorage (persists across browser contexts)
+    const pendingTimestamp = localStorage.getItem(PHANTOM_CONNECT_PENDING_KEY) ||
+                             sessionStorage.getItem(PHANTOM_CONNECT_PENDING_KEY);
     if (pendingTimestamp) {
       const elapsed = Date.now() - parseInt(pendingTimestamp, 10);
       // If pending for less than 5 minutes, show waiting state
@@ -170,6 +172,9 @@ function SupportConfirmContent() {
         setStep("waiting_for_phantom");
         // If wallet is now connected, clear pending and proceed
         if (isConnected && walletAddress) {
+          localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
+          localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+          localStorage.removeItem("phantom_return_url");
           sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
           sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
           linkWallet(walletAddress)
@@ -181,6 +186,9 @@ function SupportConfirmContent() {
         }
       } else {
         // Pending expired, clear it
+        localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
+        localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+        localStorage.removeItem("phantom_return_url");
         sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
         sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
       }
@@ -196,7 +204,12 @@ function SupportConfirmContent() {
     const hasValidAmounts = totalAmount > 0;
     // Also handle the case where we're waiting for Phantom and the wallet connected
     if (isConnected && walletAddress && (step === "connect_wallet" || step === "waiting_for_phantom") && hasValidAmounts) {
-      // Clear any pending mobile state
+      // Clear any pending mobile state (both localStorage and sessionStorage)
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
+        localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+        localStorage.removeItem("phantom_return_url");
+      }
       if (typeof sessionStorage !== "undefined") {
         sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
         sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
@@ -279,8 +292,8 @@ function SupportConfirmContent() {
     } catch (err) {
       console.error("Wallet connection error:", err);
       // On mobile, don't show error if we're in the middle of a redirect flow
-      const isPendingMobile = typeof sessionStorage !== "undefined" &&
-        sessionStorage.getItem(PHANTOM_CONNECT_PENDING_KEY);
+      const isPendingMobile = (typeof localStorage !== "undefined" && localStorage.getItem(PHANTOM_CONNECT_PENDING_KEY)) ||
+        (typeof sessionStorage !== "undefined" && sessionStorage.getItem(PHANTOM_CONNECT_PENDING_KEY));
       if (isPendingMobile && isMobile) {
         setStep("waiting_for_phantom");
         return;
@@ -412,7 +425,10 @@ function SupportConfirmContent() {
           </div>
         );
 
-      case "waiting_for_phantom":
+      case "waiting_for_phantom": {
+        const platform = detectPlatform();
+        const isPWA = platform === "mobile-pwa";
+
         return (
           <div className="space-y-6">
             <div className="text-center py-8">
@@ -423,9 +439,25 @@ function SupportConfirmContent() {
               <p className="text-muted-foreground">
                 Please approve the connection request in the Phantom app.
               </p>
-              <p className="text-sm text-muted-foreground mt-4">
-                Return here after approving in Phantom.
-              </p>
+              {isPWA ? (
+                <Card variant="outlined" padding="md" className="mt-4 bg-secondary/50 text-left">
+                  <div className="flex gap-3">
+                    <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        After approving in Phantom
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        You may be redirected to Safari. Simply return to this app from your home screen to continue.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              ) : (
+                <p className="text-sm text-muted-foreground mt-4">
+                  Return here after approving in Phantom.
+                </p>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -438,14 +470,13 @@ function SupportConfirmContent() {
                   const dappPublicKeyBase58 = bs58.encode(dappKeyPair.publicKey);
                   const dappSecretKeyBase58 = bs58.encode(dappKeyPair.secretKey);
 
-                  // Store for decryption
-                  sessionStorage.setItem(PHANTOM_DAPP_KEYPAIR_KEY, dappSecretKeyBase58);
-                  sessionStorage.setItem(PHANTOM_CONNECT_PENDING_KEY, Date.now().toString());
+                  // Store for decryption (use localStorage to persist across browsers)
+                  localStorage.setItem(PHANTOM_DAPP_KEYPAIR_KEY, dappSecretKeyBase58);
+                  localStorage.setItem(PHANTOM_CONNECT_PENDING_KEY, Date.now().toString());
+                  localStorage.setItem("phantom_return_url", window.location.href);
 
-                  // Build redirect URL without existing query params
-                  const url = new URL(window.location.href);
-                  url.search = "";
-                  const redirectUrl = encodeURIComponent(url.toString());
+                  // Build redirect URL preserving query params
+                  const redirectUrl = encodeURIComponent(window.location.href);
                   const appUrl = encodeURIComponent(window.location.origin);
 
                   window.location.href = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&dapp_encryption_public_key=${dappPublicKeyBase58}&redirect_link=${redirectUrl}&cluster=mainnet-beta`;
@@ -458,6 +489,9 @@ function SupportConfirmContent() {
                 fullWidth
                 variant="ghost"
                 onClick={() => {
+                  localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
+                  localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+                  localStorage.removeItem("phantom_return_url");
                   sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
                   sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
                   setStep("connect_wallet");
@@ -469,6 +503,7 @@ function SupportConfirmContent() {
             </div>
           </div>
         );
+      }
 
       case "checking_balance":
         return (

@@ -133,21 +133,34 @@ export function usePhantom(): UsePhantomResult {
       // If there's an error from Phantom, log it and clean up
       if (errorCode) {
         console.error("Phantom connect error:", errorCode, url.searchParams.get("errorMessage"));
-        // Clean up storage and URL
+        // Clean up storage (both localStorage and sessionStorage)
+        localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
+        localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+        localStorage.removeItem("phantom_return_url");
         sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
         sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
-        window.history.replaceState({}, "", url.pathname);
+        // Clean URL but preserve non-Phantom params
+        const cleanUrl = new URL(url);
+        cleanUrl.searchParams.delete("errorCode");
+        cleanUrl.searchParams.delete("errorMessage");
+        window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search);
         return null;
       }
 
       // If we got encrypted data back from Phantom deep link
       if (phantomEncryptionPubKey && data && nonce) {
         try {
-          // Retrieve our stored keypair
-          const storedKeypair = sessionStorage.getItem(PHANTOM_DAPP_KEYPAIR_KEY);
+          // Retrieve our stored keypair (try localStorage first, then sessionStorage for backwards compat)
+          const storedKeypair = localStorage.getItem(PHANTOM_DAPP_KEYPAIR_KEY) ||
+                                sessionStorage.getItem(PHANTOM_DAPP_KEYPAIR_KEY);
           if (!storedKeypair) {
             console.error("No stored keypair found for decryption");
-            window.history.replaceState({}, "", url.pathname);
+            // Clean URL but preserve query params that aren't Phantom-specific
+            const cleanUrl = new URL(url);
+            cleanUrl.searchParams.delete("phantom_encryption_public_key");
+            cleanUrl.searchParams.delete("data");
+            cleanUrl.searchParams.delete("nonce");
+            window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search);
             return null;
           }
 
@@ -163,7 +176,11 @@ export function usePhantom(): UsePhantomResult {
           const decryptedData = nacl.box.open.after(encryptedData, nonceBytes, sharedSecret);
           if (!decryptedData) {
             console.error("Failed to decrypt Phantom response");
-            window.history.replaceState({}, "", url.pathname);
+            const cleanUrl = new URL(url);
+            cleanUrl.searchParams.delete("phantom_encryption_public_key");
+            cleanUrl.searchParams.delete("data");
+            cleanUrl.searchParams.delete("nonce");
+            window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search);
             return null;
           }
 
@@ -174,12 +191,19 @@ export function usePhantom(): UsePhantomResult {
           if (response.public_key) {
             const walletPubKey = new PublicKey(response.public_key);
 
-            // Clean up storage
+            // Clean up storage (both localStorage and sessionStorage)
+            localStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
+            localStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
+            localStorage.removeItem("phantom_return_url");
             sessionStorage.removeItem(PHANTOM_CONNECT_PENDING_KEY);
             sessionStorage.removeItem(PHANTOM_DAPP_KEYPAIR_KEY);
 
-            // Clean up URL
-            window.history.replaceState({}, "", url.pathname);
+            // Clean URL - remove Phantom params but preserve app params
+            const cleanUrl = new URL(url);
+            cleanUrl.searchParams.delete("phantom_encryption_public_key");
+            cleanUrl.searchParams.delete("data");
+            cleanUrl.searchParams.delete("nonce");
+            window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search);
 
             return walletPubKey;
           }
@@ -187,8 +211,12 @@ export function usePhantom(): UsePhantomResult {
           console.error("Failed to parse Phantom callback:", err);
         }
 
-        // Clean up URL even on error
-        window.history.replaceState({}, "", url.pathname);
+        // Clean up URL even on error - preserve non-Phantom params
+        const cleanUrl = new URL(url);
+        cleanUrl.searchParams.delete("phantom_encryption_public_key");
+        cleanUrl.searchParams.delete("data");
+        cleanUrl.searchParams.delete("nonce");
+        window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search);
       }
 
       return null;
@@ -341,14 +369,16 @@ export function usePhantom(): UsePhantomResult {
       const dappSecretKeyBase58 = bs58.encode(dappKeyPair.secretKey);
 
       // Store the secret key for decryption when Phantom redirects back
-      if (typeof sessionStorage !== "undefined") {
-        sessionStorage.setItem(PHANTOM_DAPP_KEYPAIR_KEY, dappSecretKeyBase58);
-        sessionStorage.setItem(PHANTOM_CONNECT_PENDING_KEY, Date.now().toString());
+      // Use localStorage instead of sessionStorage so it persists across browser contexts
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(PHANTOM_DAPP_KEYPAIR_KEY, dappSecretKeyBase58);
+        localStorage.setItem(PHANTOM_CONNECT_PENDING_KEY, Date.now().toString());
+        // Store the current URL so user can return to it
+        localStorage.setItem("phantom_return_url", window.location.href);
       }
 
-      // Build redirect URL - use current URL without query params to avoid conflicts
+      // Build redirect URL - preserve existing query params
       const currentUrl = new URL(window.location.href);
-      currentUrl.search = ""; // Clear existing params
       const redirectUrl = encodeURIComponent(currentUrl.toString());
       const appUrl = encodeURIComponent(window.location.origin);
 
