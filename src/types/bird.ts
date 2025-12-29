@@ -89,3 +89,30 @@ export type SupportBirdDto = {
   amount: number;
   message?: string;
 };
+
+// Memorial Types
+export type MemorialMessage = {
+  messageId: string;
+  birdId: string;
+  userId?: string;
+  userName?: string;
+  userImageUrl?: string;
+  content: string;
+  createdAt: string;
+};
+
+export type Memorial = {
+  birdId: string;
+  birdName: string;
+  birdImageUrl?: string;
+  birdSpecies?: string;
+  memorialDate?: string;
+  totalSupporters: number;
+  totalSupport: number;
+  messages: MemorialMessage[];
+  supportHistory?: BirdSupport[];
+};
+
+export type CreateMemorialMessageDto = {
+  content: string;
+};

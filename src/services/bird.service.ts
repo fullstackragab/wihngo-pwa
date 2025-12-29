@@ -1,5 +1,5 @@
 import { apiHelper, publicGet } from "./api-helper";
-import { Bird, CreateBirdDto, UpdateBirdDto } from "@/types/bird";
+import { Bird, CreateBirdDto, UpdateBirdDto, Memorial, MemorialMessage, CreateMemorialMessageDto } from "@/types/bird";
 
 interface BirdListResponse {
   items: Bird[];
@@ -81,4 +81,17 @@ export async function getLovedBirds(userId: string): Promise<Bird[]> {
 export async function getSupportedBirds(userId: string): Promise<Bird[]> {
   const response = await apiHelper.get<BirdListResponse>(`users/${userId}/supported-birds`);
   return response.items;
+}
+
+// Memorial endpoints
+export async function getMemorial(birdId: string): Promise<Memorial> {
+  return publicGet<Memorial>(`birds/${birdId}/memorial`);
+}
+
+export async function getMemorialMessages(birdId: string): Promise<MemorialMessage[]> {
+  return publicGet<MemorialMessage[]>(`birds/${birdId}/memorial/messages`);
+}
+
+export async function postMemorialMessage(birdId: string, data: CreateMemorialMessageDto): Promise<MemorialMessage> {
+  return apiHelper.post<MemorialMessage>(`birds/${birdId}/memorial/messages`, data);
 }

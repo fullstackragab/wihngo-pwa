@@ -90,9 +90,20 @@ export function BirdCard({ bird, onSupport, variant = "default" }: BirdCardProps
                 <Heart className="w-4 h-4" />
                 Support {bird.name}
               </Button>
+            ) : bird.isMemorial ? (
+              <Button
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.href = `/birds/${bird.birdId}/memorial`;
+                }}
+                className="w-full rounded-full gap-2"
+                variant="outline"
+              >
+                In loving memory
+              </Button>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-2">
-                {bird.isMemorial ? "In loving memory" : "Not accepting support"}
+                Not accepting support
               </p>
             )}
           </div>

@@ -11,7 +11,7 @@ import { StoryCard } from "@/components/story-card";
 import { KindWordsSection } from "@/components/kind-words";
 import { Button } from "@/components/ui/button";
 import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
-import { ArrowLeft, Heart, MapPin } from "lucide-react";
+import { ArrowLeft, Heart, MapPin, Flower2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
@@ -112,9 +112,11 @@ export default function BirdDetailPage() {
             </div>
           )}
           {bird.isMemorial && (
-            <div className="absolute top-4 right-4 bg-foreground/70 text-card px-3 py-1 rounded-full text-sm">
-              In Memory
-            </div>
+            <Link href={`/birds/${bird.birdId}/memorial`}>
+              <div className="absolute top-4 right-4 bg-foreground/70 text-card px-3 py-1 rounded-full text-sm hover:bg-foreground/80 transition-colors cursor-pointer">
+                In Memory
+              </div>
+            </Link>
           )}
         </motion.div>
 
@@ -178,7 +180,19 @@ export default function BirdDetailPage() {
             </div>
           )}
 
-          {bird.supportUnavailableMessage && (
+          {/* Memorial Button */}
+          {bird.isMemorial && (
+            <div className="pt-4">
+              <Link href={`/birds/${bird.birdId}/memorial`}>
+                <Button size="lg" variant="outline" className="w-full rounded-full gap-2">
+                  <Flower2 className="w-4 h-4" />
+                  View Tributes & Memorial
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {bird.supportUnavailableMessage && !bird.isMemorial && (
             <div className="bg-muted/50 rounded-2xl p-4 border border-border">
               <p className="text-sm text-muted-foreground text-center">
                 {bird.supportUnavailableMessage}
