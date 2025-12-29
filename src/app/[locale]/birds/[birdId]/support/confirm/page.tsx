@@ -82,7 +82,7 @@ function SupportConfirmContent() {
   const wihngoAmount = parseFloat(wihngoAmountStr || "0");
   const totalAmount = birdAmount + wihngoAmount;
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const {
     isPhantomInstalled,
     isConnected,
@@ -139,14 +139,20 @@ function SupportConfirmContent() {
   });
 
   useEffect(() => {
+    // Wait for auth to load before checking
+    if (authLoading) return;
+
     if (!isAuthenticated) {
       router.push("/auth/login");
       return;
     }
-  }, [isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, router]);
 
   // Auto-advance if wallet is already connected and amounts are valid
   useEffect(() => {
+    // Wait for auth to load first
+    if (authLoading || !isAuthenticated) return;
+
     // Wait for amounts to be parsed from URL
     const hasValidAmounts = totalAmount > 0;
     if (isConnected && walletAddress && step === "connect_wallet" && hasValidAmounts) {
@@ -158,7 +164,7 @@ function SupportConfirmContent() {
           checkBalanceAndProceed();
         });
     }
-  }, [isConnected, walletAddress, step, totalAmount]);
+  }, [authLoading, isAuthenticated, isConnected, walletAddress, step, totalAmount]);
 
   const checkBalanceAndProceed = async () => {
     if (!walletAddress) return;

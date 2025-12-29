@@ -15,7 +15,11 @@
       "Bash(cat:*)",
       "Bash(mkdir:*)",
       "Bash(curl:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(timeout 15 npm run dev:*)",
+      "Bash(taskkill:*)",
+      "Bash(npx image-size:*)",
+      "Bash(file:*)"
     ]
   }
 }

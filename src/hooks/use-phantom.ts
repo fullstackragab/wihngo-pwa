@@ -192,9 +192,10 @@ export function usePhantom(): UsePhantomResult {
   }, [provider]);
 
   const connect = useCallback(async (): Promise<PublicKey | null> => {
-    // Try SDK first
+    // Try SDK first (works for both desktop and mobile with embedded provider)
     if (solanaSDK) {
       try {
+        // getPublicKey triggers connect flow if not connected
         const pubKeyStr = await solanaSDK.getPublicKey();
         if (pubKeyStr) {
           const pubKey = new PublicKey(pubKeyStr);
@@ -203,12 +204,13 @@ export function usePhantom(): UsePhantomResult {
           setConnectionMethod("sdk");
           return pubKey;
         }
-      } catch {
-        // Fall through
+      } catch (err) {
+        console.warn("SDK connect failed, trying alternatives:", err);
+        // Fall through to other methods
       }
     }
 
-    // Try browser extension
+    // Try browser extension (desktop)
     if (provider) {
       try {
         const response = await provider.connect();
@@ -218,11 +220,14 @@ export function usePhantom(): UsePhantomResult {
         return response.publicKey;
       } catch (error) {
         console.error("Failed to connect via extension:", error);
-        throw error;
+        // Don't throw yet, try deep link on mobile
+        if (!isMobile) {
+          throw error;
+        }
       }
     }
 
-    // Mobile deep link fallback
+    // Mobile deep link fallback (only if SDK and extension both failed)
     if (isMobile) {
       // Use current path to redirect back after Phantom connection
       const currentPath = window.location.pathname + window.location.search;

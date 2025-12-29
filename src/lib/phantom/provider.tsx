@@ -18,7 +18,7 @@ export function PhantomProvider({ children }: PhantomProviderProps) {
   return (
     <PhantomSDKProvider
       config={{
-        providers: ["injected"], // Use browser extension when available
+        providers: ["injected", "deeplink", "phantom"], // Browser extension + mobile deeplink + Phantom app
         addressTypes: [AddressType.solana],
       }}
       theme={lightTheme}
