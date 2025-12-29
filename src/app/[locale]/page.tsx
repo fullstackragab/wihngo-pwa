@@ -89,15 +89,6 @@ export default function HomePage() {
               Support a Bird
             </Button>
           </Link>
-          <Link href="/birds" className="w-full">
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full rounded-full"
-            >
-              Explore Birds
-            </Button>
-          </Link>
         </motion.div>
 
         {/* Auth Links */}
