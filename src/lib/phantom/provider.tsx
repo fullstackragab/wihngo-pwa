@@ -18,6 +18,7 @@ export function PhantomProvider({ children }: PhantomProviderProps) {
   return (
     <PhantomSDKProvider
       config={{
+        appId: "7d9683b1-be04-4a3b-a582-64ad800d8d04",
         providers: ["injected", "deeplink", "phantom"], // Browser extension + mobile deeplink + Phantom app
         addressTypes: [AddressType.solana],
       }}
