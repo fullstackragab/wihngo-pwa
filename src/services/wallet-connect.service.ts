@@ -79,6 +79,7 @@ const PHANTOM_PUBLIC_KEY = "wallet_connect_phantom_public";
 const PHANTOM_SESSION_KEY = "wallet_connect_phantom_session";
 const WALLET_PUBLIC_KEY = "wallet_connect_wallet_public";
 const CONNECT_STEP_KEY = "wallet_connect_step"; // "connect" | "sign"
+const REDIRECT_URL_KEY = "wallet_connect_redirect_url"; // Full URL to return to
 
 export function storeIntentLocally(intent: CreateIntentResponse, dappSecretKey?: string): void {
   if (typeof localStorage === "undefined") return;
@@ -113,6 +114,7 @@ export function clearStoredIntent(): void {
   localStorage.removeItem(PHANTOM_SESSION_KEY);
   localStorage.removeItem(WALLET_PUBLIC_KEY);
   localStorage.removeItem(CONNECT_STEP_KEY);
+  localStorage.removeItem(REDIRECT_URL_KEY);
 }
 
 // Store dapp keypair for session
@@ -174,6 +176,22 @@ export function setConnectStep(step: "connect" | "sign"): void {
 export function getConnectStep(): "connect" | "sign" | null {
   if (typeof localStorage === "undefined") return null;
   return localStorage.getItem(CONNECT_STEP_KEY) as "connect" | "sign" | null;
+}
+
+// Store the original page URL (with query params) to redirect back after Phantom
+export function storeRedirectUrl(url: string): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(REDIRECT_URL_KEY, url);
+}
+
+export function getStoredRedirectUrl(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem(REDIRECT_URL_KEY);
+}
+
+export function clearRedirectUrl(): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.removeItem(REDIRECT_URL_KEY);
 }
 
 // ============================================

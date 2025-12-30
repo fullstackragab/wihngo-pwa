@@ -26,6 +26,9 @@ import {
   getStoredWalletPublicKey,
   setConnectStep,
   getConnectStep,
+  storeRedirectUrl,
+  getStoredRedirectUrl,
+  clearRedirectUrl,
 } from "@/services/wallet-connect.service";
 
 // Try to import the SDK hooks
@@ -211,7 +214,8 @@ export function usePhantom(): UsePhantomResult {
           return;
         }
 
-        const redirectUrl = window.location.href.split("?")[0];
+        // Use clean path for redirect (original URL with params is stored separately)
+        const redirectUrl = window.location.origin + window.location.pathname;
         const signMessageUrl = buildPhantomSignMessageUrl(
           storedIntent.message,
           redirectUrl,
@@ -220,8 +224,8 @@ export function usePhantom(): UsePhantomResult {
           nonce
         );
 
-        console.log("Redirecting to signMessage...");
-        window.location.href = signMessageUrl;
+        console.log("Redirecting to signMessage:", signMessageUrl);
+        window.location.assign(signMessageUrl);
         return;
       }
 
@@ -245,6 +249,7 @@ export function usePhantom(): UsePhantomResult {
 
         const storedIntent = getStoredIntent();
         const walletPublicKey = getStoredWalletPublicKey();
+        const originalUrl = getStoredRedirectUrl();
 
         if (!storedIntent?.state || !walletPublicKey) {
           console.error("Missing state or wallet public key");
@@ -267,6 +272,15 @@ export function usePhantom(): UsePhantomResult {
             setIsConnected(true);
             setConnectionMethod("deeplink");
             console.log("Wallet connected:", result.walletAddress);
+
+            // Redirect back to original page with query params preserved
+            if (originalUrl) {
+              clearRedirectUrl();
+              cleanPhantomParams();
+              // Use replace to avoid back button issues
+              window.location.replace(originalUrl);
+              return;
+            }
           }
         } catch (err) {
           console.error("Callback failed:", err);
@@ -429,13 +443,17 @@ export function usePhantom(): UsePhantomResult {
         // Generate encryption keypair
         const dappKeypair = generateDappKeypair();
 
+        // Store the full current URL (with query params) for restoring after callback
+        const fullUrl = window.location.href;
+        storeRedirectUrl(fullUrl);
+
         // Store for callback processing
         storeIntentLocally(intent);
         storeDappKeypair(dappKeypair.publicKey, dappKeypair.secretKey);
         setConnectStep("connect"); // Start with connect step
 
-        // Build redirect URL (current page)
-        const redirectUrl = window.location.href.split("?")[0]; // Remove existing params
+        // Build redirect URL (current page path only - params will be restored from storage)
+        const redirectUrl = window.location.origin + window.location.pathname;
 
         // Build Phantom connect URL (first step)
         const phantomUrl = buildPhantomConnectUrl(
@@ -443,10 +461,11 @@ export function usePhantom(): UsePhantomResult {
           dappKeypair.publicKey
         );
 
-        console.log("Redirecting to Phantom connect...");
-        // Redirect to Phantom
-        window.location.href = phantomUrl;
-        return null;
+        console.log("Redirecting to Phantom connect:", phantomUrl);
+        // Redirect to Phantom - use assign for more reliable cross-platform behavior
+        window.location.assign(phantomUrl);
+        // Return a never-resolving promise to prevent further code execution
+        return new Promise(() => {}) as unknown as null;
       } catch (err) {
         console.error("Mobile connect failed:", err);
         throw new Error("Failed to initiate wallet connection");
