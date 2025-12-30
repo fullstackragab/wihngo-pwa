@@ -1,70 +1,55 @@
-import { apiHelper, publicFetch, saveAuthToken } from "./api-helper";
-
 // ============================================
-// TYPES (Matching Backend API)
+// TYPES
 // ============================================
 
-export interface CreateIntentResponse {
-  state: string;      // Opaque token to identify this intent
-  nonce: string;      // Nonce for the signing request
-  message: string;    // Message to be signed by the wallet (base58 or utf8)
-}
-
-export interface CallbackRequest {
-  state: string;           // State token from intent
-  publicKey: string;       // Base58 Solana public key
-  signature: string;       // Base58 Ed25519 signature of the message
-}
-
-export interface CallbackResponse {
-  success: boolean;
-  walletAddress: string;
-  accessToken?: string;
-  refreshToken?: string;
-  message?: string;
+export interface LocalIntent {
+  state: string;      // Random state for tracking
+  message: string;    // Message to be signed by the wallet
 }
 
 // ============================================
-// API ENDPOINTS
+// LOCAL WALLET CONNECT (No Backend)
 // ============================================
 
 /**
- * Create a wallet connect intent
- * Returns state token and message to be signed
+ * Generate a local wallet connect intent (no backend needed)
+ * Creates a message for the user to sign to prove wallet ownership
  */
-export async function createWalletConnectIntent(): Promise<CreateIntentResponse> {
-  return apiHelper.post<CreateIntentResponse>("wallet-connect/intents", {});
+export function generateLocalIntent(): LocalIntent {
+  const timestamp = Date.now();
+  const randomBytes = new Uint8Array(16);
+  if (typeof crypto !== "undefined") {
+    crypto.getRandomValues(randomBytes);
+  }
+  const state = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  const message = `Sign this message to connect your wallet to Wihngo.\n\nTimestamp: ${timestamp}\nNonce: ${state.slice(0, 8)}`;
+
+  return { state, message };
 }
 
 /**
- * Process wallet callback - PUBLIC endpoint
- * Verifies the signature and links wallet to user
- * Returns new auth tokens for session recovery
+ * Store wallet address after successful connection
  */
-export async function processWalletCallback(
-  params: CallbackRequest
-): Promise<CallbackResponse> {
-  const response = await publicFetch("wallet-connect/callback", {
-    method: "POST",
-    body: JSON.stringify(params),
-  });
+export function saveConnectedWallet(walletAddress: string): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem("connected_wallet_address", walletAddress);
+}
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: "Callback failed" }));
-    throw new Error(error.message || "Failed to process wallet callback");
-  }
+/**
+ * Get the connected wallet address
+ */
+export function getConnectedWallet(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem("connected_wallet_address");
+}
 
-  const result = await response.json();
-
-  // Store new tokens for session recovery
-  if (result.accessToken) {
-    saveAuthToken(result.accessToken);
-  }
-  if (result.refreshToken && typeof window !== "undefined") {
-    localStorage.setItem("auth_refresh_token", result.refreshToken);
-  }
-
-  return result;
+/**
+ * Clear the connected wallet
+ */
+export function clearConnectedWallet(): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.removeItem("connected_wallet_address");
 }
 
 // ============================================
@@ -81,7 +66,7 @@ const WALLET_PUBLIC_KEY = "wallet_connect_wallet_public";
 const CONNECT_STEP_KEY = "wallet_connect_step"; // "connect" | "sign"
 const REDIRECT_URL_KEY = "wallet_connect_redirect_url"; // Full URL to return to
 
-export function storeIntentLocally(intent: CreateIntentResponse, dappSecretKey?: string): void {
+export function storeIntentLocally(intent: LocalIntent, dappSecretKey?: string): void {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(INTENT_STATE_KEY, intent.state);
   localStorage.setItem(INTENT_MESSAGE_KEY, intent.message);

@@ -5,8 +5,10 @@ import { PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
 import bs58 from "bs58";
 import { detectPlatform, isMobileDevice } from "@/lib/phantom/platform";
 import {
-  createWalletConnectIntent,
-  processWalletCallback,
+  generateLocalIntent,
+  saveConnectedWallet,
+  getConnectedWallet,
+  clearConnectedWallet,
   buildPhantomConnectUrl,
   buildPhantomSignMessageUrl,
   generateDappKeypair,
@@ -19,9 +21,7 @@ import {
   getStoredDappPublicKey,
   getStoredDappSecretKey,
   storePhantomPublicKey,
-  getStoredPhantomPublicKey,
   storePhantomSession,
-  getStoredPhantomSession,
   storeWalletPublicKey,
   getStoredWalletPublicKey,
   setConnectStep,
@@ -30,6 +30,7 @@ import {
   getStoredRedirectUrl,
   clearRedirectUrl,
 } from "@/services/wallet-connect.service";
+import { linkWallet } from "@/services/wallet.service";
 
 // Try to import the SDK hooks
 let useSolanaSDK: (() => { solana: SolanaSDK }) | undefined;
@@ -245,49 +246,44 @@ export function usePhantom(): UsePhantomResult {
           return;
         }
 
-        console.log("SignMessage successful");
+        console.log("SignMessage successful, signature:", signResult.signature);
 
-        const storedIntent = getStoredIntent();
         const walletPublicKey = getStoredWalletPublicKey();
         const originalUrl = getStoredRedirectUrl();
 
-        if (!storedIntent?.state || !walletPublicKey) {
-          console.error("Missing state or wallet public key");
+        if (!walletPublicKey) {
+          console.error("Missing wallet public key");
           clearStoredIntent();
           cleanPhantomParams();
           return;
         }
 
+        // Save wallet locally and to backend
+        saveConnectedWallet(walletPublicKey);
         try {
-          // Send to backend callback
-          const result = await processWalletCallback({
-            state: storedIntent.state,
-            publicKey: walletPublicKey,
-            signature: signResult.signature,
-          });
-
-          if (result.success && result.walletAddress) {
-            const walletPubKey = new PublicKey(result.walletAddress);
-            setPublicKey(walletPubKey);
-            setIsConnected(true);
-            setConnectionMethod("deeplink");
-            console.log("Wallet connected:", result.walletAddress);
-
-            // Redirect back to original page with query params preserved
-            if (originalUrl) {
-              clearRedirectUrl();
-              cleanPhantomParams();
-              // Use replace to avoid back button issues
-              window.location.replace(originalUrl);
-              return;
-            }
-          }
+          await linkWallet(walletPublicKey);
+          console.log("Wallet linked to backend:", walletPublicKey);
         } catch (err) {
-          console.error("Callback failed:", err);
+          console.warn("Failed to link wallet to backend:", err);
+          // Continue anyway - wallet is connected locally
         }
 
+        const walletPubKey = new PublicKey(walletPublicKey);
+        setPublicKey(walletPubKey);
+        setIsConnected(true);
+        setConnectionMethod("deeplink");
+        console.log("Wallet connected:", walletPublicKey);
+
+        // Clean up and redirect
         clearStoredIntent();
         cleanPhantomParams();
+
+        // Redirect back to original page with query params preserved
+        if (originalUrl) {
+          clearRedirectUrl();
+          window.location.replace(originalUrl);
+          return;
+        }
       }
     };
 
@@ -308,6 +304,22 @@ export function usePhantom(): UsePhantomResult {
 
       if (isMobile) {
         setIsPhantomInstalled(true);
+      }
+
+      // Check for previously connected wallet in localStorage
+      const savedWallet = getConnectedWallet();
+      if (savedWallet) {
+        try {
+          setPublicKey(new PublicKey(savedWallet));
+          setIsConnected(true);
+          setConnectionMethod("deeplink");
+          console.log("Restored wallet from localStorage:", savedWallet);
+          setIsLoading(false);
+          return;
+        } catch {
+          // Invalid saved wallet, clear it
+          clearConnectedWallet();
+        }
       }
 
       // Check SDK first
@@ -377,25 +389,25 @@ export function usePhantom(): UsePhantomResult {
         if (pubKeyStr) {
           const pubKey = new PublicKey(pubKeyStr);
 
-          // Now sign the message for backend verification
-          const intent = await createWalletConnectIntent();
+          // Sign message locally
+          const intent = generateLocalIntent();
           const messageBytes = new TextEncoder().encode(intent.message);
           const signResult = await solanaSDK.signMessage(messageBytes);
-          const signatureBase58 = bs58.encode(signResult.signature);
+          console.log("SDK signature:", bs58.encode(signResult.signature));
 
-          // Send to backend
-          const result = await processWalletCallback({
-            state: intent.state,
-            publicKey: pubKeyStr,
-            signature: signatureBase58,
-          });
-
-          if (result.success) {
-            setPublicKey(pubKey);
-            setIsConnected(true);
-            setConnectionMethod("sdk");
-            return pubKey;
+          // Save wallet locally and to backend
+          saveConnectedWallet(pubKeyStr);
+          try {
+            await linkWallet(pubKeyStr);
+            console.log("Wallet linked to backend:", pubKeyStr);
+          } catch (err) {
+            console.warn("Failed to link wallet to backend:", err);
           }
+
+          setPublicKey(pubKey);
+          setIsConnected(true);
+          setConnectionMethod("sdk");
+          return pubKey;
         }
       } catch (err) {
         console.warn("SDK connect failed:", err);
@@ -407,26 +419,27 @@ export function usePhantom(): UsePhantomResult {
       try {
         const response = await provider.connect();
         const pubKey = response.publicKey;
+        const pubKeyStr = pubKey.toBase58();
 
-        // Sign message for backend verification
-        const intent = await createWalletConnectIntent();
+        // Sign message locally
+        const intent = generateLocalIntent();
         const messageBytes = new TextEncoder().encode(intent.message);
         const signResult = await provider.signMessage(messageBytes);
-        const signatureBase58 = bs58.encode(signResult.signature);
+        console.log("Extension signature:", bs58.encode(signResult.signature));
 
-        // Send to backend
-        const result = await processWalletCallback({
-          state: intent.state,
-          publicKey: pubKey.toBase58(),
-          signature: signatureBase58,
-        });
-
-        if (result.success) {
-          setPublicKey(pubKey);
-          setIsConnected(true);
-          setConnectionMethod("extension");
-          return pubKey;
+        // Save wallet locally and to backend
+        saveConnectedWallet(pubKeyStr);
+        try {
+          await linkWallet(pubKeyStr);
+          console.log("Wallet linked to backend:", pubKeyStr);
+        } catch (err) {
+          console.warn("Failed to link wallet to backend:", err);
         }
+
+        setPublicKey(pubKey);
+        setIsConnected(true);
+        setConnectionMethod("extension");
+        return pubKey;
       } catch (error) {
         console.error("Extension connect failed:", error);
         throw error;
@@ -436,9 +449,9 @@ export function usePhantom(): UsePhantomResult {
     // Mobile deep link flow (two-step: connect -> signMessage)
     if (isMobile) {
       try {
-        // Create intent
-        const intent = await createWalletConnectIntent();
-        console.log("Created wallet connect intent");
+        // Create local intent (no backend needed)
+        const intent = generateLocalIntent();
+        console.log("Created local wallet connect intent");
 
         // Generate encryption keypair
         const dappKeypair = generateDappKeypair();
@@ -484,6 +497,7 @@ export function usePhantom(): UsePhantomResult {
     setPublicKey(null);
     setIsConnected(false);
     clearStoredIntent();
+    clearConnectedWallet();
   }, [provider]);
 
   const signTransaction = useCallback(

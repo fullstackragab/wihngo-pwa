@@ -1,7 +1,7 @@
 {
   "name": "Wihngo - Where Hearts & Wings Gather",
   "short_name": "Wihngo",
-  "description": "Support birds and their caretakers, and share heartwarming stories",
+  "description": "Support birds and share heartwarming stories",
   "id": "/",
   "start_url": "/",
   "scope": "/",
@@ -38,12 +38,12 @@
     {
       "name": "Browse Birds",
       "url": "/birds",
-      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Stories",
       "url": "/stories",
-      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
