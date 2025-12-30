@@ -2,11 +2,17 @@
   "name": "Wihngo - Where Hearts & Wings Gather",
   "short_name": "Wihngo",
   "description": "Support birds and their caretakers, and share heartwarming stories",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#7a9b76",
   "orientation": "portrait",
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  },
+  "handle_links": "preferred",
   "icons": [
     {
       "src": "/icon-192.png",
