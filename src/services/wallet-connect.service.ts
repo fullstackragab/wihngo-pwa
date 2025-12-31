@@ -65,6 +65,7 @@ const PHANTOM_SESSION_KEY = "wallet_connect_phantom_session";
 const WALLET_PUBLIC_KEY = "wallet_connect_wallet_public";
 const CONNECT_STEP_KEY = "wallet_connect_step"; // "connect" | "sign"
 const REDIRECT_URL_KEY = "wallet_connect_redirect_url"; // Full URL to return to
+const SUPPORT_PARAMS_KEY = "wallet_connect_support_params"; // Support page params
 
 export function storeIntentLocally(intent: LocalIntent, dappSecretKey?: string): void {
   if (typeof localStorage === "undefined") return;
@@ -100,6 +101,7 @@ export function clearStoredIntent(): void {
   localStorage.removeItem(WALLET_PUBLIC_KEY);
   localStorage.removeItem(CONNECT_STEP_KEY);
   localStorage.removeItem(REDIRECT_URL_KEY);
+  localStorage.removeItem(SUPPORT_PARAMS_KEY);
 }
 
 // Store dapp keypair for session
@@ -177,6 +179,34 @@ export function getStoredRedirectUrl(): string | null {
 export function clearRedirectUrl(): void {
   if (typeof localStorage === "undefined") return;
   localStorage.removeItem(REDIRECT_URL_KEY);
+}
+
+// Store support page params for restoring after Phantom callback
+export interface SupportParams {
+  birdId: string;
+  birdAmount: number;
+  wihngoAmount: number;
+}
+
+export function storeSupportParams(params: SupportParams): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(SUPPORT_PARAMS_KEY, JSON.stringify(params));
+}
+
+export function getStoredSupportParams(): SupportParams | null {
+  if (typeof localStorage === "undefined") return null;
+  const stored = localStorage.getItem(SUPPORT_PARAMS_KEY);
+  if (!stored) return null;
+  try {
+    return JSON.parse(stored) as SupportParams;
+  } catch {
+    return null;
+  }
+}
+
+export function clearSupportParams(): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.removeItem(SUPPORT_PARAMS_KEY);
 }
 
 // ============================================

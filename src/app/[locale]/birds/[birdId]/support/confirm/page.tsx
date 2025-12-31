@@ -33,7 +33,13 @@ import {
 import Image from "next/image";
 import { ApiError } from "@/services/api-helper";
 import { isMobileDevice, detectPlatform } from "@/lib/phantom/platform";
-import { getStoredIntentId, clearStoredIntent } from "@/services/wallet-connect.service";
+import {
+  getStoredIntentId,
+  clearStoredIntent,
+  storeSupportParams,
+  getStoredSupportParams,
+  clearSupportParams,
+} from "@/services/wallet-connect.service";
 
 type SupportStep =
   | "connect_wallet"
@@ -78,11 +84,27 @@ function SupportConfirmContent() {
 
   // Get birdId from route params
   const birdId = params.birdId as string;
-  // Get amounts from query params
+
+  // Check if this is a Phantom callback (has phantom params in URL)
+  const isPhantomCallback =
+    typeof window !== "undefined" &&
+    (new URL(window.location.href).searchParams.has("phantom_encryption_public_key") ||
+     new URL(window.location.href).searchParams.has("data"));
+
+  // Get amounts from query params, or restore from localStorage if in callback
   const birdAmountStr = searchParams.get("birdAmount");
   const wihngoAmountStr = searchParams.get("wihngoAmount");
-  const birdAmount = parseFloat(birdAmountStr || "0");
-  const wihngoAmount = parseFloat(wihngoAmountStr || "0");
+
+  // If URL params missing but we have stored params (callback scenario), use stored values
+  const storedParams = getStoredSupportParams();
+  const shouldUseStoredParams = !birdAmountStr && !wihngoAmountStr && storedParams && storedParams.birdId === birdId;
+
+  const birdAmount = shouldUseStoredParams
+    ? storedParams.birdAmount
+    : parseFloat(birdAmountStr || "0");
+  const wihngoAmount = shouldUseStoredParams
+    ? storedParams.wihngoAmount
+    : parseFloat(wihngoAmountStr || "0");
   const totalAmount = birdAmount + wihngoAmount;
 
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -153,19 +175,21 @@ function SupportConfirmContent() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Check for pending wallet connect intent on mount
+  // Check for pending wallet connect intent or Phantom callback on mount
   useEffect(() => {
     const pendingIntentId = getStoredIntentId();
-    if (pendingIntentId && !isConnected) {
-      // Show waiting state while checking for callback
+    // If we have pending intent or this is a Phantom callback, show waiting state
+    if ((pendingIntentId || isPhantomCallback) && !isConnected) {
       setStep("waiting_for_phantom");
     }
-  }, []);
+  }, [isPhantomCallback, isConnected]);
 
   // When wallet connects, clear pending state and proceed
   useEffect(() => {
     if (isConnected && walletAddress && step === "waiting_for_phantom") {
       clearStoredIntent();
+      // Clear support params after successful connection (they're now in component state)
+      clearSupportParams();
       linkWallet(walletAddress)
         .then(() => checkBalanceAndProceed())
         .catch((err) => {
@@ -185,6 +209,7 @@ function SupportConfirmContent() {
     // Auto-advance when wallet is connected
     if (isConnected && walletAddress && step === "connect_wallet" && hasValidAmounts) {
       clearStoredIntent();
+      clearSupportParams();
       linkWallet(walletAddress)
         .then(() => checkBalanceAndProceed())
         .catch((err) => {
@@ -248,10 +273,23 @@ function SupportConfirmContent() {
   const handleConnectWallet = async () => {
     try {
       setError("");
+
+      // On mobile, store support params before redirecting to Phantom
+      // This ensures we can restore them when Phantom redirects back
+      if (isMobile && totalAmount > 0) {
+        storeSupportParams({
+          birdId,
+          birdAmount,
+          wihngoAmount,
+        });
+      }
+
       const publicKey = await connect();
       if (publicKey) {
         // Link wallet to user account in backend
         await linkWallet(publicKey.toBase58());
+        // Clear stored params on successful connection (desktop)
+        clearSupportParams();
       } else if (isMobile) {
         // On mobile, connect() returns null because it redirects to Phantom app
         // Set waiting state - the page will reload when user returns
@@ -327,7 +365,23 @@ function SupportConfirmContent() {
   // Display name for UI
   const recipientName = isWihngoOnly ? "Wihngo" : (bird?.name || preflightData?.bird?.name || "Bird");
 
+  // Check if we're processing a Phantom callback - if so, show loading instead of error
+  const pendingIntentId = getStoredIntentId();
+  const isProcessingCallback = isPhantomCallback || (pendingIntentId && !isConnected);
+
   if (!isWihngoOnly && !isBirdSupport) {
+    // If we're in a callback but params aren't loaded yet, show loading
+    if (isProcessingCallback) {
+      return (
+        <div className="min-h-screen-safe flex items-center justify-center">
+          <div className="text-center">
+            <LoadingSpinner className="mx-auto mb-4" />
+            <p className="text-muted-foreground">Processing wallet connection...</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen-safe flex items-center justify-center">
         <div className="text-center">
