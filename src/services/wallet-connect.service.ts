@@ -415,3 +415,88 @@ export function decryptPhantomResponse(
     return null;
   }
 }
+
+// ============================================
+// iOS PWA SPECIFIC HELPERS
+// ============================================
+
+const IOS_PWA_PENDING_KEY = "ios_pwa_pending_action";
+const IOS_PWA_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+export type IOSPWAActionType = "connect" | "sign" | "signTransaction";
+
+export interface IOSPWAPendingAction {
+  action: IOSPWAActionType;
+  timestamp: number;
+  returnUrl: string;
+  intentId?: string;
+  supportParams?: SupportParams;
+}
+
+/**
+ * Store pending action for iOS PWA before redirecting to Phantom
+ * iOS PWA needs special handling because Phantom opens Safari,
+ * and user must manually return to the PWA.
+ */
+export function storeIOSPWAPendingAction(action: IOSPWAPendingAction): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(IOS_PWA_PENDING_KEY, JSON.stringify(action));
+}
+
+/**
+ * Get pending iOS PWA action (if any)
+ * Returns null if no action or if action has expired
+ */
+export function getIOSPWAPendingAction(): IOSPWAPendingAction | null {
+  if (typeof localStorage === "undefined") return null;
+
+  const stored = localStorage.getItem(IOS_PWA_PENDING_KEY);
+  if (!stored) return null;
+
+  try {
+    const action = JSON.parse(stored) as IOSPWAPendingAction;
+
+    // Check if expired (5 minutes)
+    if (Date.now() - action.timestamp > IOS_PWA_TIMEOUT_MS) {
+      clearIOSPWAPendingAction();
+      return null;
+    }
+
+    return action;
+  } catch {
+    clearIOSPWAPendingAction();
+    return null;
+  }
+}
+
+/**
+ * Clear pending iOS PWA action
+ */
+export function clearIOSPWAPendingAction(): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.removeItem(IOS_PWA_PENDING_KEY);
+}
+
+/**
+ * Check if there's a pending iOS PWA action
+ */
+export function hasIOSPWAPendingAction(): boolean {
+  return getIOSPWAPendingAction() !== null;
+}
+
+/**
+ * Check if the iOS PWA pending action has expired
+ */
+export function isIOSPWAPendingActionExpired(): boolean {
+  if (typeof localStorage === "undefined") return false;
+
+  const stored = localStorage.getItem(IOS_PWA_PENDING_KEY);
+  if (!stored) return false;
+
+  try {
+    const action = JSON.parse(stored) as IOSPWAPendingAction;
+    return Date.now() - action.timestamp > IOS_PWA_TIMEOUT_MS;
+  } catch {
+    return false;
+  }
+}

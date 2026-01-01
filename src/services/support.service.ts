@@ -12,30 +12,99 @@ import {
   PreflightRequest,
   PreflightResponse,
 } from "@/types/support";
+import {
+  getOrCreateIdempotencyKey,
+  clearIdempotencyKey,
+  generateSubmitIdempotencyKey,
+  clearSubmitAttempts,
+} from "@/lib/idempotency";
+import { withRetry, RETRY_PRESETS } from "@/lib/retry";
+
+// ============================================
+// STATUS NORMALIZATION
+// ============================================
+
+/**
+ * Normalize status values from backend (lowercase) to frontend (PascalCase)
+ */
+function normalizeStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    completed: "Completed",
+    confirming: "Confirming",
+    submitted: "Processing",
+    processing: "Processing",
+    failed: "Failed",
+    pending: "Pending",
+    expired: "Expired",
+    cancelled: "Cancelled",
+    timeout: "Failed",
+  };
+  return statusMap[status.toLowerCase()] || status;
+}
+
+/**
+ * Backend response format for submit
+ */
+interface BackendSubmitResponse {
+  paymentId: string;
+  solanaSignature?: string;
+  status: string;
+  errorMessage?: string;
+  wasAlreadySubmitted?: boolean;
+}
 
 // ============================================
 // SUPPORT INTENT FLOW (Bird Support)
 // ============================================
 
 // Step 1: Preflight check - verify user can support a bird
+// Retries on network failure
 export async function preflightCheck(
   data: PreflightRequest
 ): Promise<PreflightResponse> {
-  return apiHelper.post<PreflightResponse>("support/birds/preflight", data);
+  return withRetry(
+    () => apiHelper.post<PreflightResponse>("support/birds/preflight", data),
+    RETRY_PRESETS.network
+  );
 }
 
-// Step 2: Create support intent - backend builds the transaction
+// Step 2a: Create support intent for BIRD support
+// Uses idempotency key to prevent duplicate payments
+// Retries on network failure (safe due to idempotency key)
 export async function createSupportIntent(params: {
   birdId: string;
   birdAmount: number;
   wihngoAmount: number;
+  userId?: string; // Optional: for idempotency key generation
 }): Promise<SupportIntentResponse> {
-  const response = await apiHelper.post<SupportIntent>("support/intents", {
+  // Generate idempotency key if we have a user ID
+  let idempotencyKey: string | undefined;
+  if (params.userId) {
+    idempotencyKey = await getOrCreateIdempotencyKey({
+      userId: params.userId,
+      birdId: params.birdId,
+      birdAmount: params.birdAmount,
+      wihngoAmount: params.wihngoAmount,
+    });
+  }
+
+  const requestBody: Record<string, unknown> = {
     birdId: params.birdId,
     birdAmount: params.birdAmount,
     wihngoSupportAmount: params.wihngoAmount,
     currency: "USDC",
-  });
+  };
+
+  // Include idempotency key if generated
+  if (idempotencyKey) {
+    requestBody.idempotencyKey = idempotencyKey;
+  }
+
+  // Retry on network failure - safe due to idempotency key
+  const response = await withRetry(
+    () => apiHelper.post<SupportIntent>("support/intents", requestBody),
+    RETRY_PRESETS.network
+  );
 
   // Map backend response to frontend-friendly format
   return {
@@ -48,15 +117,87 @@ export async function createSupportIntent(params: {
   };
 }
 
+// Step 2b: Create support intent for WIHNGO-ONLY support
+// Dedicated endpoint for supporting Wihngo without a bird
+export async function createWihngoSupportIntent(params: {
+  amount: number;
+  userId?: string;
+}): Promise<SupportIntentResponse> {
+  // Generate idempotency key if we have a user ID
+  let idempotencyKey: string | undefined;
+  if (params.userId) {
+    idempotencyKey = await getOrCreateIdempotencyKey({
+      userId: params.userId,
+      birdId: "wihngo", // Use "wihngo" as identifier for idempotency
+      birdAmount: 0,
+      wihngoAmount: params.amount,
+    });
+  }
+
+  const requestBody: Record<string, unknown> = {
+    amount: params.amount,
+  };
+
+  if (idempotencyKey) {
+    requestBody.idempotencyKey = idempotencyKey;
+  }
+
+  // Retry on network failure - safe due to idempotency key
+  const response = await withRetry(
+    () => apiHelper.post<SupportIntent>("support/wihngo", requestBody),
+    RETRY_PRESETS.network
+  );
+
+  // Map backend response to frontend-friendly format
+  return {
+    intentId: response.intentId,
+    birdWallet: null, // No bird wallet for Wihngo-only support
+    wihngoWallet: response.wihngoWalletAddress,
+    usdcMint: response.usdcMintAddress,
+    serializedTransaction: response.serializedTransaction,
+    expiresAt: response.expiresAt,
+  };
+}
+
+/**
+ * Clear idempotency cache after successful payment
+ * Should be called when payment is confirmed
+ */
+export function clearPaymentCache(birdId: string): void {
+  clearIdempotencyKey(birdId);
+}
+
 // Step 3: Submit signed transaction - backend submits to Solana
+// Uses idempotency key to prevent double submissions
 export async function submitSupport(
   intentId: string,
   signedTransaction: string
 ): Promise<SubmitSupportResponse> {
-  return apiHelper.post<SubmitSupportResponse>(
+  // Generate idempotency key for this submission attempt
+  // Format: {paymentId}-{attemptNumber}-{timestamp}
+  const idempotencyKey = generateSubmitIdempotencyKey(intentId);
+
+  const response = await apiHelper.post<BackendSubmitResponse>(
     `support/intents/${intentId}/submit`,
-    { signedTransaction }
+    {
+      paymentId: intentId,
+      signedTransaction,
+      idempotencyKey,
+    }
   );
+
+  // Clear attempt counter on successful submission
+  if (response.status === "completed" || response.status === "confirming" || response.status === "submitted") {
+    clearSubmitAttempts(intentId);
+  }
+
+  // Normalize response to frontend format
+  return {
+    intentId,
+    status: normalizeStatus(response.status) as SubmitSupportResponse["status"],
+    solanaSignature: response.solanaSignature,
+    message: response.errorMessage,
+  };
 }
 
 // Step 4: Poll for support status
@@ -117,10 +258,15 @@ export async function getBalance(): Promise<UserBalance> {
 // ============================================
 
 // Check on-chain balance for any wallet address
+// Retries on network failure with quick preset
 export async function checkWalletBalance(
   walletAddress: string
 ): Promise<OnChainBalanceResponse> {
-  return publicGet<OnChainBalanceResponse>(
-    `wallets/${walletAddress}/on-chain-balance`
+  return withRetry(
+    () =>
+      publicGet<OnChainBalanceResponse>(
+        `wallets/${walletAddress}/on-chain-balance`
+      ),
+    RETRY_PRESETS.balance
   );
 }

@@ -30,6 +30,11 @@ import {
   getStoredRedirectUrl,
   clearRedirectUrl,
 } from "@/services/wallet-connect.service";
+import {
+  isWalletConnectStale,
+  clearAllLocalState,
+  storeWalletConnectTimestamp,
+} from "@/services/session-recovery.service";
 import { linkWallet } from "@/services/wallet.service";
 
 // Try to import the SDK hooks
@@ -80,6 +85,25 @@ declare global {
 }
 
 export type ConnectionMethod = "extension" | "deeplink" | "sdk";
+
+// Connection timeout in ms (30 seconds for extension)
+const EXTENSION_TIMEOUT = 30000;
+
+/**
+ * Wrap a promise with a timeout
+ */
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(message)), ms)
+    ),
+  ]);
+}
 
 export interface UsePhantomResult {
   publicKey: PublicKey | null;
@@ -381,6 +405,24 @@ export function usePhantom(): UsePhantomResult {
     };
   }, [provider]);
 
+  // Check for stale wallet connection state on init
+  // Clear if connection attempt is older than 5 minutes
+  useEffect(() => {
+    const checkForStaleState = () => {
+      const currentStep = getConnectStep();
+
+      // Only check if there's an active connection flow
+      if (!currentStep) return;
+
+      if (isWalletConnectStale()) {
+        console.log("Clearing stale wallet connection state (>5 minutes old)");
+        clearAllLocalState();
+      }
+    };
+
+    checkForStaleState();
+  }, []); // Run once on mount
+
   const connect = useCallback(async (): Promise<PublicKey | null> => {
     // SDK flow
     if (solanaSDK) {
@@ -417,14 +459,23 @@ export function usePhantom(): UsePhantomResult {
     // Extension flow (desktop)
     if (provider && !isMobile) {
       try {
-        const response = await provider.connect();
+        // Connect with timeout to prevent indefinite waiting
+        const response = await withTimeout(
+          provider.connect(),
+          EXTENSION_TIMEOUT,
+          "Wallet connection timed out. Please try again."
+        );
         const pubKey = response.publicKey;
         const pubKeyStr = pubKey.toBase58();
 
-        // Sign message locally
+        // Sign message locally (also with timeout)
         const intent = generateLocalIntent();
         const messageBytes = new TextEncoder().encode(intent.message);
-        const signResult = await provider.signMessage(messageBytes);
+        const signResult = await withTimeout(
+          provider.signMessage(messageBytes),
+          EXTENSION_TIMEOUT,
+          "Message signing timed out. Please try again."
+        );
         console.log("Extension signature:", bs58.encode(signResult.signature));
 
         // Save wallet locally and to backend
@@ -464,6 +515,9 @@ export function usePhantom(): UsePhantomResult {
         storeIntentLocally(intent);
         storeDappKeypair(dappKeypair.publicKey, dappKeypair.secretKey);
         setConnectStep("connect"); // Start with connect step
+
+        // Store timestamp for stale detection
+        storeWalletConnectTimestamp();
 
         // Build redirect URL (current page path only - params will be restored from storage)
         const redirectUrl = window.location.origin + window.location.pathname;

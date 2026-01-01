@@ -7,9 +7,11 @@ import { getBird } from "@/services/bird.service";
 import {
   preflightCheck,
   createSupportIntent,
+  createWihngoSupportIntent,
   submitSupport,
   checkWalletBalance,
   linkWallet,
+  clearPaymentCache,
 } from "@/services/support.service";
 import {
   MINIMUM_SOL_FOR_GAS,
@@ -32,14 +34,35 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { ApiError } from "@/services/api-helper";
-import { isMobileDevice, detectPlatform } from "@/lib/phantom/platform";
+import {
+  isMobileDevice,
+  detectPlatform,
+  isIOSPWA,
+  getPhantomRedirectInstructions,
+} from "@/lib/phantom/platform";
 import {
   getStoredIntentId,
   clearStoredIntent,
   storeSupportParams,
   getStoredSupportParams,
   clearSupportParams,
+  storeIOSPWAPendingAction,
+  getIOSPWAPendingAction,
+  clearIOSPWAPendingAction,
+  getConnectedWallet,
 } from "@/services/wallet-connect.service";
+import {
+  recoverSession,
+  clearAllLocalState,
+  storeWalletConnectTimestamp,
+  RecoveryResult,
+} from "@/services/session-recovery.service";
+import { mapError, MappedError, createError } from "@/services/error-mapping.service";
+import { RecoveryModal } from "@/components/payment/RecoveryModal";
+import { IOSPWAWaiting } from "@/components/phantom/IOSPWAWaiting";
+import { PaymentError } from "@/components/payment/PaymentError";
+import { PaymentProgress, PaymentStep } from "@/components/payment/PaymentProgress";
+import { SubmissionTimeout } from "@/components/payment/SubmissionTimeout";
 
 type SupportStep =
   | "connect_wallet"
@@ -107,7 +130,7 @@ function SupportConfirmContent() {
     : parseFloat(wihngoAmountStr || "0");
   const totalAmount = birdAmount + wihngoAmount;
 
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const {
     isPhantomInstalled,
     isConnected,
@@ -125,6 +148,21 @@ function SupportConfirmContent() {
     solBalance: number;
     usdcBalance: number;
   } | null>(null);
+
+  // Session recovery state
+  const [recoveryResult, setRecoveryResult] = useState<RecoveryResult | null>(null);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [recoveryChecked, setRecoveryChecked] = useState(false);
+
+  // iOS PWA specific state
+  const [showIOSPWAWaiting, setShowIOSPWAWaiting] = useState(false);
+  const isIOSPWADevice = typeof window !== "undefined" && isIOSPWA();
+
+  // Payment error state (using MappedError for user-friendly messages)
+  const [paymentError, setPaymentError] = useState<MappedError | null>(null);
+
+  // Submission timing for timeout warnings
+  const [submissionStartTime, setSubmissionStartTime] = useState<number | null>(null);
 
   // Check if this is Wihngo-only support (special case)
   const isWihngoOnly = birdId === "wihngo" && wihngoAmount > 0;
@@ -150,12 +188,18 @@ function SupportConfirmContent() {
   });
 
   const createIntentMutation = useMutation({
-    mutationFn: (params: { birdAmt: number; wihngoAmt: number }) =>
-      createSupportIntent({
-        birdId: birdId!,
-        birdAmount: params.birdAmt,
-        wihngoAmount: params.wihngoAmt,
-      }),
+    mutationFn: (params: { birdAmt: number; wihngoAmt: number; userId?: string; isWihngoOnly: boolean }) =>
+      params.isWihngoOnly
+        ? createWihngoSupportIntent({
+            amount: params.wihngoAmt,
+            userId: params.userId,
+          })
+        : createSupportIntent({
+            birdId: birdId!,
+            birdAmount: params.birdAmt,
+            wihngoAmount: params.wihngoAmt,
+            userId: params.userId,
+          }),
   });
 
   const submitMutation = useMutation({
@@ -174,6 +218,59 @@ function SupportConfirmContent() {
       return;
     }
   }, [authLoading, isAuthenticated, router]);
+
+  // Check for incomplete sessions on mount (session recovery)
+  useEffect(() => {
+    const checkForRecovery = async () => {
+      // Skip recovery check if:
+      // - Already checked
+      // - This is a Phantom callback (let the normal callback flow handle it)
+      // - Auth is still loading
+      if (recoveryChecked || isPhantomCallback || authLoading || !isAuthenticated) {
+        return;
+      }
+
+      setRecoveryChecked(true);
+
+      try {
+        const result = await recoverSession();
+
+        if (result.status !== "no_session") {
+          console.log("Recovery session found:", result.status);
+          setRecoveryResult(result);
+
+          // For already_completed, redirect to success immediately
+          if (result.status === "already_completed" && result.solanaSignature) {
+            setSolanaSignature(result.solanaSignature);
+            setStep("success");
+            clearAllLocalState();
+            return;
+          }
+
+          // Show recovery modal for other recoverable states
+          setShowRecoveryModal(true);
+        }
+      } catch (err) {
+        console.error("Recovery check failed:", err);
+        // Don't block the user, just log the error
+      }
+    };
+
+    checkForRecovery();
+  }, [recoveryChecked, isPhantomCallback, authLoading, isAuthenticated]);
+
+  // Check for iOS PWA pending action on mount
+  useEffect(() => {
+    if (!isIOSPWADevice) return;
+
+    const pendingAction = getIOSPWAPendingAction();
+    if (pendingAction) {
+      console.log("iOS PWA pending action found:", pendingAction.action);
+      // Show the iOS PWA waiting screen to allow user to manually check status
+      setShowIOSPWAWaiting(true);
+      setStep("waiting_for_phantom");
+    }
+  }, [isIOSPWADevice]);
 
   // Check for pending wallet connect intent or Phantom callback on mount
   useEffect(() => {
@@ -282,6 +379,23 @@ function SupportConfirmContent() {
           birdAmount,
           wihngoAmount,
         });
+        // Store timestamp for stale detection
+        storeWalletConnectTimestamp();
+
+        // iOS PWA specific: store pending action for manual return handling
+        if (isIOSPWADevice) {
+          storeIOSPWAPendingAction({
+            action: "connect",
+            timestamp: Date.now(),
+            returnUrl: window.location.href,
+            supportParams: {
+              birdId,
+              birdAmount,
+              wihngoAmount,
+            },
+          });
+          setShowIOSPWAWaiting(true);
+        }
       }
 
       const publicKey = await connect();
@@ -311,18 +425,24 @@ function SupportConfirmContent() {
 
   const handleConfirmSupport = async () => {
     if (!walletAddress) {
-      setError("Wallet not connected");
+      setPaymentError(createError("WALLET_NOT_CONNECTED"));
+      setStep("error");
       return;
     }
 
     try {
       setError("");
+      setPaymentError(null);
       setStep("creating_intent");
 
       // Step 1: Create support intent - backend builds the transaction
+      // Pass userId for idempotency key generation
+      // Use dedicated Wihngo endpoint for Wihngo-only support
       const intent = await createIntentMutation.mutateAsync({
         birdAmt: birdAmount,
         wihngoAmt: wihngoAmount,
+        userId: user?.userId,
+        isWihngoOnly,
       });
       setSupportIntent(intent);
 
@@ -332,6 +452,7 @@ function SupportConfirmContent() {
 
       // Step 3: Submit signed transaction to backend - backend submits to Solana
       setStep("submitting");
+      setSubmissionStartTime(Date.now());
       const result = await submitMutation.mutateAsync({
         intentId: intent.intentId,
         signedTransaction,
@@ -344,19 +465,145 @@ function SupportConfirmContent() {
 
       // Check status
       if (result.status === "Completed" || result.status === "Confirming" || result.status === "Processing") {
+        // Clear payment cache on success
+        clearPaymentCache(birdId);
         setStep("success");
       } else if (result.status === "Failed") {
-        setError(result.message || "Support failed");
+        setPaymentError(createError("TX_FAILED", result.message || "Transaction failed"));
         setStep("error");
       } else {
         // For other statuses, treat as success (backend is processing)
+        clearPaymentCache(birdId);
         setStep("success");
       }
     } catch (err) {
       console.error("Support error:", err);
-      setError(parseApiError(err));
+      // Map error to user-friendly message
+      const mapped = mapError(err);
+      setPaymentError(mapped);
       setStep("error");
     }
+  };
+
+  // Handle continuing from recovery modal
+  const handleRecoveryContinue = () => {
+    setShowRecoveryModal(false);
+
+    if (!recoveryResult) return;
+
+    switch (recoveryResult.status) {
+      case "resume_signing":
+        // We have an intent with a transaction to sign
+        if (recoveryResult.serializedTransaction && recoveryResult.intentId) {
+          setSupportIntent({
+            intentId: recoveryResult.intentId,
+            serializedTransaction: recoveryResult.serializedTransaction,
+            birdWallet: null,
+            wihngoWallet: null,
+            usdcMint: "",
+            expiresAt: "",
+          });
+          setStep("ready");
+        } else {
+          // Missing data, start over
+          handleRecoveryStartOver();
+        }
+        break;
+
+      case "awaiting_confirmation":
+        // Payment is being processed, show submitting state
+        setStep("submitting");
+        // TODO: Poll for confirmation status
+        break;
+
+      case "resume_wallet_connect":
+        // Wallet connection was interrupted, show waiting state
+        setStep("waiting_for_phantom");
+        break;
+
+      case "incomplete":
+        // Restore support params if available
+        // Component already has these from URL or localStorage restoration
+        setStep("connect_wallet");
+        break;
+
+      case "offline_recovery":
+        // Retry the recovery check
+        setRecoveryChecked(false);
+        break;
+
+      default:
+        // Unknown state, just close modal
+        break;
+    }
+  };
+
+  // Handle starting over from recovery modal
+  const handleRecoveryStartOver = () => {
+    clearAllLocalState();
+    setRecoveryResult(null);
+    setShowRecoveryModal(false);
+    setStep("connect_wallet");
+    setError("");
+    setSupportIntent(null);
+    setPreflightData(null);
+    setSolanaSignature("");
+    setBalanceInfo(null);
+  };
+
+  // Handle closing recovery modal (for already_completed state)
+  const handleRecoveryClose = () => {
+    setShowRecoveryModal(false);
+    // If already completed, redirect to bird page
+    if (recoveryResult?.status === "already_completed") {
+      router.push(isWihngoOnly ? "/" : `/birds/${birdId}`);
+    }
+  };
+
+  // iOS PWA status check function
+  const checkIOSPWAStatus = async (): Promise<"pending" | "completed" | "failed" | "expired"> => {
+    // Check if wallet is now connected (localStorage or hook state)
+    const savedWallet = getConnectedWallet();
+    if (savedWallet || isConnected) {
+      return "completed";
+    }
+
+    // Check if the pending action has expired
+    const pendingAction = getIOSPWAPendingAction();
+    if (!pendingAction) {
+      return "expired";
+    }
+
+    return "pending";
+  };
+
+  // Handle iOS PWA wallet connection complete
+  const handleIOSPWAComplete = () => {
+    console.log("iOS PWA wallet connection complete");
+    clearIOSPWAPendingAction();
+    setShowIOSPWAWaiting(false);
+
+    // Wallet should be connected now, proceed with balance check
+    if (walletAddress) {
+      checkBalanceAndProceed();
+    } else {
+      // Try to get from localStorage
+      const savedWallet = getConnectedWallet();
+      if (savedWallet) {
+        // Force a page reload to pick up the connected state
+        window.location.reload();
+      }
+    }
+  };
+
+  // Handle iOS PWA session expired
+  const handleIOSPWAExpired = () => {
+    console.log("iOS PWA session expired");
+    clearIOSPWAPendingAction();
+    clearAllLocalState();
+    setShowIOSPWAWaiting(false);
+    setStep("connect_wallet");
+    setError("Session expired. Please try connecting again.");
   };
 
   // Allow bird support (birdAmount > 0) or wihngo-only support (wihngoAmount > 0)
@@ -451,7 +698,37 @@ function SupportConfirmContent() {
       case "waiting_for_phantom": {
         const platform = detectPlatform();
         const isPWA = platform === "mobile-pwa";
-        const isMobile = isMobileDevice();
+        const isMobileView = isMobileDevice();
+        const instructions = getPhantomRedirectInstructions();
+
+        // iOS PWA: Show special waiting component with polling
+        if (isIOSPWADevice && showIOSPWAWaiting) {
+          return (
+            <div className="space-y-6">
+              <IOSPWAWaiting
+                onStatusCheck={checkIOSPWAStatus}
+                onComplete={handleIOSPWAComplete}
+                onExpired={handleIOSPWAExpired}
+                title="Waiting for Phantom"
+                waitingMessage={instructions.afterApproval}
+              />
+
+              <Button
+                fullWidth
+                variant="ghost"
+                onClick={() => {
+                  clearIOSPWAPendingAction();
+                  clearStoredIntent();
+                  setShowIOSPWAWaiting(false);
+                  setStep("connect_wallet");
+                  setError("");
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          );
+        }
 
         return (
           <div className="space-y-6">
@@ -463,7 +740,7 @@ function SupportConfirmContent() {
               <p className="text-muted-foreground">
                 Please approve the connection request in the Phantom app.
               </p>
-              {isMobile && (
+              {isMobileView && (
                 <Card variant="outlined" padding="md" className="mt-4 bg-secondary/50 text-left">
                   <div className="flex gap-3">
                     <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
@@ -742,14 +1019,25 @@ function SupportConfirmContent() {
 
       case "submitting":
         return (
-          <div className="text-center py-8">
-            <LoadingSpinner className="mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-foreground mb-2">
-              Processing
-            </h2>
-            <p className="text-muted-foreground">
-              Submitting your transaction to the blockchain...
-            </p>
+          <div className="py-8">
+            <div className="text-center">
+              <LoadingSpinner className="mx-auto mb-4" />
+              <h2 className="text-lg font-semibold text-foreground mb-2">
+                Processing
+              </h2>
+              <p className="text-muted-foreground">
+                Submitting your transaction to the blockchain...
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Do not close this page
+              </p>
+            </div>
+            {submissionStartTime && (
+              <SubmissionTimeout
+                startTime={submissionStartTime}
+                signature={solanaSignature || undefined}
+              />
+            )}
           </div>
         );
 
@@ -814,6 +1102,23 @@ function SupportConfirmContent() {
         );
 
       case "error":
+        // Use PaymentError component for user-friendly error display
+        if (paymentError) {
+          return (
+            <PaymentError
+              error={paymentError}
+              onRetry={() => {
+                setPaymentError(null);
+                setError("");
+                handleConfirmSupport();
+              }}
+              onStartOver={handleRecoveryStartOver}
+              onConnectWallet={handleConnectWallet}
+              onClose={() => router.push(isWihngoOnly ? "/" : `/birds/${birdId}`)}
+            />
+          );
+        }
+        // Fallback for legacy error display (shouldn't happen)
         return (
           <div className="space-y-6">
             <div className="text-center">
@@ -900,6 +1205,15 @@ function SupportConfirmContent() {
 
         {renderContent()}
       </main>
+
+      {/* Recovery Modal */}
+      <RecoveryModal
+        recovery={recoveryResult}
+        isOpen={showRecoveryModal}
+        onContinue={handleRecoveryContinue}
+        onStartOver={handleRecoveryStartOver}
+        onClose={handleRecoveryClose}
+      />
     </div>
   );
 }
