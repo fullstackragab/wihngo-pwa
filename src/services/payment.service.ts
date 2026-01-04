@@ -52,20 +52,20 @@ export async function createPaymentIntent(
 }
 
 /**
- * Confirm a payment after user signs transaction
- * Endpoint: POST /api/payments/confirm
+ * Verify a Solana payment after user signs transaction
+ * Endpoint: POST /api/payments/solana/verify
  * Requires: authentication
  *
  * Backend verifies on-chain:
  * - Token mint matches USDC
- * - Amount matches payment intent
- * - Destination matches platform wallet
+ * - Amount matches birdAmountCents + wihngoAmountCents
+ * - Destination matches birdWallet
  * - Tx not already used (idempotent)
  */
 export async function confirmPayment(
   request: PaymentConfirmRequest
 ): Promise<PaymentConfirmResponse> {
-  return authenticatedPost<PaymentConfirmResponse>('/payments/confirm', request);
+  return authenticatedPost<PaymentConfirmResponse>('/payments/solana/verify', request);
 }
 
 /**

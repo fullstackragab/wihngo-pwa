@@ -45,11 +45,14 @@ export interface PaymentIntent {
 
 /**
  * Payment confirmation request
- * POST /api/payments/confirm
+ * POST /api/payments/solana/verify
  */
 export interface PaymentConfirmRequest {
-  paymentId: string;              // From PaymentIntent
   txHash: string;                 // Solana transaction signature
+  birdId: string;                 // Bird being supported
+  birdWallet: string;             // Bird's receiving wallet address
+  birdAmountCents: number;        // Bird support amount in USD cents
+  wihngoAmountCents: number;      // Platform support amount in USD cents
 }
 
 /**

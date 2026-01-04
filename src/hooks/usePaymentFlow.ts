@@ -4,13 +4,14 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   PaymentFlowState,
+  PaymentIntent,
+  PaymentConfig,
   INITIAL_PAYMENT_FLOW_STATE,
 } from '@/types/payment';
 import {
   createPaymentIntent,
   confirmPayment,
   getPaymentStatus,
-  getPaymentConfig,
 } from '@/services/payment.service';
 import {
   connectPhantomDesktop,
@@ -19,6 +20,7 @@ import {
   isPhantomInstalled,
   executePayment,
   executeDualPayment,
+  getSolanaConfig,
 } from '@/lib/solana/phantom';
 
 /**
@@ -57,6 +59,10 @@ interface UsePaymentFlowReturn {
   isConnecting: boolean;
   formattedAmount: string | null;
   isPhantomAvailable: boolean;
+  // Config state
+  config: PaymentConfig | null;
+  isConfigLoading: boolean;
+  isConfigReady: boolean;
 }
 
 export function usePaymentFlow({
@@ -74,6 +80,11 @@ export function usePaymentFlow({
   const connectLockRef = useRef(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
+  // Payment config state - fetched from backend before any payment operations
+  const [config, setConfig] = useState<PaymentConfig | null>(null);
+  const [isConfigLoading, setIsConfigLoading] = useState(true);
+  const configFetchedRef = useRef(false);
+
   const isPhantomAvailable = isPhantomInstalled();
 
   // Cleanup polling on unmount
@@ -85,6 +96,39 @@ export function usePaymentFlow({
       }
     };
   }, []);
+
+  // Fetch payment config from backend on mount
+  // This MUST complete before any payment operations can proceed
+  useEffect(() => {
+    if (configFetchedRef.current) return;
+    configFetchedRef.current = true;
+
+    const fetchConfig = async () => {
+      try {
+        console.log('[usePaymentFlow] Fetching payment config from backend...');
+        const paymentConfig = await getSolanaConfig();
+        setConfig(paymentConfig);
+        console.log('[usePaymentFlow] Payment config loaded:', {
+          network: paymentConfig.network,
+          usdcMint: paymentConfig.usdcMint,
+          platformWallet: paymentConfig.platformWallet,
+        });
+      } catch (err) {
+        console.error('[usePaymentFlow] Failed to load payment config:', err);
+        const message = err instanceof Error ? err.message : 'Failed to load payment configuration.';
+        setState(prev => ({
+          ...prev,
+          status: 'payment_failed',
+          error: message,
+        }));
+        onError?.(message);
+      } finally {
+        setIsConfigLoading(false);
+      }
+    };
+
+    fetchConfig();
+  }, [onError]);
 
   // Check for existing wallet connection on mount
   useEffect(() => {
@@ -114,11 +158,14 @@ export function usePaymentFlow({
 
   /**
    * Submit transaction for verification
+   * @param txHash - The Solana transaction signature
+   * @param intentOverride - Optional intent to use (for timing issues with setState)
    */
-  const submitTransactionInternal = useCallback(async (txHash: string, paymentId?: string) => {
-    const intentPaymentId = paymentId || state.paymentIntent?.paymentId;
+  const submitTransactionInternal = useCallback(async (txHash: string, intentOverride?: PaymentIntent) => {
+    // Use provided intent or fall back to state (intentOverride handles setState timing)
+    const intent = intentOverride || state.paymentIntent;
 
-    if (!intentPaymentId) {
+    if (!intent) {
       setError('No payment in progress.');
       return;
     }
@@ -134,8 +181,11 @@ export function usePaymentFlow({
 
       // Submit to backend for verification
       const result = await confirmPayment({
-        paymentId: intentPaymentId,
         txHash,
+        birdId: intent.birdId,
+        birdWallet: intent.destinationWallet,
+        birdAmountCents: intent.amountCents,
+        wihngoAmountCents: intent.wihngoAmountCents || 0,
       });
 
       console.log('[usePaymentFlow] Backend response:', result);
@@ -146,11 +196,11 @@ export function usePaymentFlow({
           confirmedAt: result.confirmedAt || new Date().toISOString(),
         });
 
-        onSuccess?.(intentPaymentId);
+        onSuccess?.(intent.paymentId);
 
       } else if (result.status === 'pending') {
         // Start polling for confirmation
-        startPolling(intentPaymentId);
+        startPolling(intent.paymentId);
 
       } else {
         setError(result.failureReason || 'Payment verification failed.');
@@ -224,6 +274,12 @@ export function usePaymentFlow({
    * Initiate payment - creates intent and executes transaction
    */
   const initiatePayment = useCallback(async () => {
+    // Config must be loaded before any payment operations
+    if (!config) {
+      setError('Payment configuration not loaded. Please refresh and try again.');
+      return;
+    }
+
     if (state.status !== 'wallet_connected') {
       setError('Please connect your digital wallet first.');
       return;
@@ -236,15 +292,6 @@ export function usePaymentFlow({
 
     try {
       updateState({ status: 'payment_pending', error: null });
-
-      // Fetch payment config from backend
-      let paymentConfig;
-      try {
-        paymentConfig = await getPaymentConfig();
-        console.log('[usePaymentFlow] Payment config:', paymentConfig);
-      } catch (configError) {
-        console.warn('[usePaymentFlow] Could not fetch payment config:', configError);
-      }
 
       // Create payment intent on backend
       const intent = await createPaymentIntent({
@@ -287,8 +334,8 @@ export function usePaymentFlow({
       }
 
       if (result.success && result.signature) {
-        // Desktop: Submit for verification
-        await submitTransactionInternal(result.signature, intent.paymentId);
+        // Desktop: Submit for verification (pass intent to avoid setState timing issues)
+        await submitTransactionInternal(result.signature, intent);
       } else {
         setError(result.error || 'Transaction failed.');
       }
@@ -297,7 +344,7 @@ export function usePaymentFlow({
       const message = err instanceof Error ? err.message : 'Failed to create payment. Please try again.';
       setError(message);
     }
-  }, [state.status, state.walletAddress, birdId, amountCents, wihngoAmountCents, updateState, setError, submitTransactionInternal]);
+  }, [config, state.status, state.walletAddress, birdId, amountCents, wihngoAmountCents, updateState, setError, submitTransactionInternal]);
 
   /**
    * Submit signed transaction hash to backend
@@ -386,7 +433,8 @@ export function usePaymentFlow({
 
   // Computed helpers
   const isWalletConnected = state.walletAddress !== null;
-  const canPay = state.status === 'wallet_connected' || state.status === 'payment_pending';
+  const isConfigReady = config !== null && !isConfigLoading;
+  const canPay = isConfigReady && (state.status === 'wallet_connected' || state.status === 'payment_pending');
   const isProcessing = state.status === 'payment_pending' || state.status === 'payment_submitted';
   const formattedAmount = state.paymentIntent
     ? `$${(state.paymentIntent.amountCents / 100).toFixed(2)}`
@@ -407,5 +455,9 @@ export function usePaymentFlow({
     isConnecting,
     formattedAmount,
     isPhantomAvailable,
+    // Config state
+    config,
+    isConfigLoading,
+    isConfigReady,
   };
 }
