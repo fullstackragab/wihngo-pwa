@@ -106,16 +106,19 @@ export default function SupportWihngoPage() {
           transition={{ delay: 0.3 }}
           className="grid grid-cols-3 gap-2"
         >
-          {[1, 5, 10].map((value) => (
-            <Button
-              key={value}
-              variant="outline"
-              onClick={() => setAmount(value.toFixed(2))}
-              className="rounded-xl"
-            >
-              ${value}
-            </Button>
-          ))}
+          {[1, 5, 10].map((value) => {
+            const isSelected = parseFloat(amount) === value;
+            return (
+              <Button
+                key={value}
+                variant={isSelected ? "default" : "outline"}
+                onClick={() => setAmount(value.toFixed(2))}
+                className={`rounded-xl ${isSelected ? "ring-2 ring-primary ring-offset-2" : ""}`}
+              >
+                ${value}
+              </Button>
+            );
+          })}
         </motion.div>
 
         {/* Send Button */}

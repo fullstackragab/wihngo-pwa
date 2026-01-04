@@ -133,9 +133,10 @@ export interface ManualPaymentIntent {
 
 /**
  * Create manual payment request
+ * birdId can be null for Wihngo-only platform support
  */
 export interface CreateManualPaymentRequest {
-  birdId: string;
+  birdId: string | null;
   amountCents: number;
   email: string;
   wihngoAmountCents?: number;

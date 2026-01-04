@@ -65,10 +65,16 @@ function ManualPaymentContent() {
 
   const amountCents = amountCentsParam ? parseInt(amountCentsParam, 10) : 0;
   const wihngoAmountCents = wihngoAmountCentsParam ? parseInt(wihngoAmountCentsParam, 10) : 0;
+  const totalAmountCents = amountCents + wihngoAmountCents;
+  const isWihngoOnlySupport = birdIdParam === 'wihngo' && amountCents === 0 && wihngoAmountCents > 0;
 
   // Create payment intent with provided email
   const createPaymentWithEmail = useCallback(async (emailToUse: string) => {
-    if (!birdIdParam || !amountCents) {
+    // Validate: need either bird support OR wihngo-only support
+    const hasBirdSupport = birdIdParam && birdIdParam !== 'wihngo' && amountCents > 0;
+    const hasWihngoOnlySupport = birdIdParam === 'wihngo' && wihngoAmountCents > 0;
+
+    if (!hasBirdSupport && !hasWihngoOnlySupport) {
       setStatus('error');
       setError('Missing payment details. Please try again from the bird page.');
       return;
@@ -78,8 +84,11 @@ function ManualPaymentContent() {
     setIsCreating(true);
 
     try {
+      // For Wihngo-only support, send null for birdId
+      const actualBirdId = isWihngoOnlySupport ? null : birdIdParam;
+
       const intent = await createManualPaymentIntent({
-        birdId: birdIdParam,
+        birdId: actualBirdId,
         amountCents,
         email: emailToUse,
         wihngoAmountCents,
@@ -87,7 +96,7 @@ function ManualPaymentContent() {
 
       const paymentInfo: PaymentInfo = {
         ...intent,
-        birdId: birdIdParam,
+        birdId: birdIdParam || 'wihngo',
         amountUsdc: intent.amountCents / 100,
       };
 
@@ -119,7 +128,11 @@ function ManualPaymentContent() {
       return;
     }
 
-    if (!birdIdParam || !amountCents) {
+    // Validate: need either bird support OR wihngo-only support
+    const hasBirdSupport = birdIdParam && birdIdParam !== 'wihngo' && amountCents > 0;
+    const hasWihngoOnlySupport = birdIdParam === 'wihngo' && wihngoAmountCents > 0;
+
+    if (!hasBirdSupport && !hasWihngoOnlySupport) {
       setStatus('error');
       setError('Missing payment details. Please try again from the bird page.');
       return;
@@ -133,7 +146,7 @@ function ManualPaymentContent() {
     } else {
       setStatus('collect_email');
     }
-  }, [birdIdParam, amountCents, existingPaymentId, authLoading, isAuthenticated, user?.email, createPaymentWithEmail]);
+  }, [birdIdParam, amountCents, wihngoAmountCents, existingPaymentId, authLoading, isAuthenticated, user?.email, createPaymentWithEmail]);
 
   const isValidEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
