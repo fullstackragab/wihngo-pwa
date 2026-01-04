@@ -703,6 +703,81 @@ export interface TransactionResult {
 }
 
 /**
+ * Result from signing a transaction (without sending)
+ */
+export interface SignTransactionResult {
+  success: boolean;
+  /** Base64-encoded signed transaction */
+  signedTransaction?: string;
+  error?: string;
+  errorCode?: PhantomErrorCode;
+}
+
+/**
+ * Sign a serialized transaction via Phantom desktop extension (without sending)
+ * Used when backend builds the transaction and handles submission.
+ *
+ * @param serializedTransaction - Base64-encoded unsigned transaction from backend
+ * @returns Signed transaction as base64 string
+ */
+export async function signSerializedTransaction(
+  serializedTransaction: string
+): Promise<SignTransactionResult> {
+  const provider = getPhantomProvider();
+
+  if (!provider) {
+    return {
+      success: false,
+      error: 'Phantom wallet not available',
+      errorCode: 'UNKNOWN',
+    };
+  }
+
+  if (!provider.isConnected) {
+    return {
+      success: false,
+      error: 'Wallet not connected',
+      errorCode: 'UNKNOWN',
+    };
+  }
+
+  try {
+    // Decode base64 to buffer
+    const transactionBuffer = Buffer.from(serializedTransaction, 'base64');
+
+    // Deserialize to Transaction object
+    const transaction = Transaction.from(transactionBuffer);
+
+    console.log('[signSerializedTransaction] Signing transaction...');
+
+    // Sign the transaction (Phantom adds the signature)
+    const signedTransaction = await provider.signTransaction(transaction);
+
+    // Serialize back to base64
+    const signedBuffer = signedTransaction.serialize({
+      requireAllSignatures: true,
+      verifySignatures: true,
+    });
+    const signedBase64 = signedBuffer.toString('base64');
+
+    console.log('[signSerializedTransaction] Transaction signed successfully');
+
+    return {
+      success: true,
+      signedTransaction: signedBase64,
+    };
+  } catch (err) {
+    console.error('[signSerializedTransaction] Error:', err);
+    const result = categorizePhantomError(err);
+    return {
+      success: false,
+      error: result.error,
+      errorCode: result.errorCode,
+    };
+  }
+}
+
+/**
  * Sign and send transaction via Phantom desktop extension
  */
 export async function signAndSendTransactionDesktop(

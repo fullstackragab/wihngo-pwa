@@ -1,4 +1,4 @@
-import { apiHelper, publicGet } from "./api-helper";
+import { apiHelper, publicGet, uploadFile } from "./api-helper";
 import { Bird, CreateBirdDto, UpdateBirdDto, Memorial, MemorialMessage, CreateMemorialMessageDto } from "@/types/bird";
 
 interface BirdListResponse {
@@ -98,4 +98,14 @@ export async function getMemorialMessages(birdId: string): Promise<MemorialMessa
 
 export async function postMemorialMessage(birdId: string, data: CreateMemorialMessageDto): Promise<MemorialMessage> {
   return apiHelper.post<MemorialMessage>(`birds/${birdId}/memorial/messages`, data);
+}
+
+// Image upload - must be done after bird is created
+export interface BirdImageUploadResponse {
+  s3Key: string;
+  url: string;
+}
+
+export async function uploadBirdImage(birdId: string, file: File): Promise<BirdImageUploadResponse> {
+  return uploadFile<BirdImageUploadResponse>(`birds/${birdId}/image`, file, "file");
 }

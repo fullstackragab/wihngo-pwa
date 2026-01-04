@@ -201,3 +201,36 @@ export type ConfirmSupportResponse = {
 
 // Alias for backwards compatibility
 export type BalanceCheckResponse = OnChainBalanceResponse;
+
+// UI Copy - User-friendly messages (avoids crypto jargon)
+export const SUPPORT_UI_COPY = {
+  walletButton: 'Connect digital wallet',
+  walletConnected: 'Wallet connected',
+  supportButton: 'Support with digital dollars',
+  supportPending: 'Waiting for approval...',
+  supportSubmitted: 'Confirming support...',
+  supportConfirmed: 'Support confirmed!',
+  supportFailed: 'Support failed',
+  retry: 'Try again',
+  learnMore: 'What are digital dollars?',
+  earlyAccess: 'Pay with digital dollars (card payments coming soon)',
+  digitalDollarsExplainer: {
+    title: 'What are digital dollars?',
+    description: 'Digital dollars (USDC) are a modern way to send money online. They work just like regular dollars but move instantly and directly to who you\'re supporting.',
+    benefits: [
+      { icon: '💨', text: 'Instant transfers - no waiting days for banks' },
+      { icon: '🎯', text: '100% goes directly to who you support' },
+      { icon: '🔒', text: 'Secure and transparent on the blockchain' },
+    ],
+    footer: 'You\'ll need a Phantom wallet with USDC to pay. Card payments coming soon!',
+  },
+  errors: {
+    walletNotConnected: 'Please connect your wallet first.',
+    transactionFailed: 'The transaction didn\'t go through. Please try again.',
+    invalidAmount: 'Invalid amount. Please check and try again.',
+    networkError: 'Connection issue. Please check your internet and try again.',
+    insufficientBalance: 'Not enough USDC in your wallet.',
+    insufficientSol: 'Not enough SOL for transaction fees.',
+    generic: 'Something went wrong. Please try again.',
+  },
+} as const;

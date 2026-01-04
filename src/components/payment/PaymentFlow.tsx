@@ -11,17 +11,14 @@ import {
   RefreshCw,
   HelpCircle,
   ArrowRight,
-  Terminal,
   X,
   ExternalLink,
 } from 'lucide-react';
-import { usePaymentFlow } from '@/hooks/usePaymentFlow';
-import { PAYMENT_UI_COPY } from '@/types/payment';
-import { getPaymentConfig } from '@/services/payment.service';
+import { useSupportFlow } from '@/hooks/useSupportFlow';
+import { SUPPORT_UI_COPY } from '@/types/support';
+import { usePhantom } from '@/hooks/use-phantom';
 import { MobilePaymentFlow } from './MobilePaymentFlow';
 import './payment-flow.css';
-
-const IS_DEV = process.env.NODE_ENV === 'development';
 
 /**
  * Detect mobile device
@@ -93,6 +90,7 @@ export function PaymentFlow({
 
 /**
  * DesktopPaymentFlow — Desktop-only payment component
+ * Uses the new useSupportFlow hook with correct backend endpoints
  */
 function DesktopPaymentFlow({
   birdId,
@@ -101,38 +99,35 @@ function DesktopPaymentFlow({
   wihngoAmountCents = 0,
   onSuccess,
 }: PaymentFlowProps) {
-  const priceFormatted = `$${(amountCents / 100).toFixed(2)}`;
-  const [isDevnet, setIsDevnet] = useState(false);
+  // Convert cents to USDC (dollars)
+  const birdAmount = amountCents / 100;
+  const wihngoAmount = wihngoAmountCents / 100;
+  const priceFormatted = `$${birdAmount.toFixed(2)}`;
 
-  // Fetch network from backend config
-  useEffect(() => {
-    getPaymentConfig()
-      .then((config) => {
-        setIsDevnet(config.network === 'devnet');
-      })
-      .catch(() => {
-        // Default to mainnet on error
-        setIsDevnet(false);
-      });
-  }, []);
+  // Check if Phantom is available
+  const { isPhantomInstalled } = usePhantom();
 
   const {
     state,
     connectWallet,
     disconnectWallet,
-    initiatePayment,
-    submitTransaction,
+    initiateSupport,
     retry,
     isWalletConnected,
     isConnecting,
+    isProcessing,
     formattedAmount,
-    isPhantomAvailable,
-  } = usePaymentFlow({
+    formattedTotal,
+  } = useSupportFlow({
     birdId,
-    amountCents,
-    wihngoAmountCents,
-    onSuccess: () => {
+    birdAmount,
+    wihngoAmount,
+    onSuccess: (intentId, signature) => {
+      console.log('[PaymentFlow] Support completed:', intentId, signature);
       onSuccess?.();
+    },
+    onError: (error, errorCode) => {
+      console.error('[PaymentFlow] Support failed:', error, errorCode);
     },
   });
 
@@ -140,82 +135,79 @@ function DesktopPaymentFlow({
     if (!isWalletConnected) {
       await connectWallet();
     } else if (state.status === 'wallet_connected') {
-      await initiatePayment();
+      await initiateSupport();
     }
-  }, [isWalletConnected, state.status, connectWallet, initiatePayment]);
+  }, [isWalletConnected, state.status, connectWallet, initiateSupport]);
 
-  const handleTxHashSubmit = useCallback(async (txHash: string) => {
-    await submitTransaction(txHash);
-  }, [submitTransaction]);
+  // Map new statuses to UI states
+  const isIdle = state.status === 'idle';
+  const isWalletConnectedState = state.status === 'wallet_connected';
+  const isPending = ['preflight', 'creating_intent', 'awaiting_signature'].includes(state.status);
+  const isSubmitting = ['submitting', 'confirming'].includes(state.status);
+  const isCompleted = state.status === 'completed';
+  const isFailed = state.status === 'failed';
 
   return (
     <div className="payment-flow">
-      {/* Devnet indicator */}
-      {isDevnet && (
-        <div className="payment-flow__network-badge">
-          <span>Test Mode</span>
-        </div>
-      )}
-
       {/* Early access notice */}
       <div className="payment-flow__notice">
         <DollarSign className="payment-flow__notice-icon" />
-        <span>{PAYMENT_UI_COPY.earlyAccess}</span>
+        <span>Pay with digital dollars (card payments coming soon)</span>
       </div>
 
       {/* Price display */}
       <div className="payment-flow__price">
         <span className="payment-flow__price-label">Support amount</span>
         <span className="payment-flow__price-value">
-          {formattedAmount || priceFormatted}
+          {formattedTotal || priceFormatted}
         </span>
       </div>
 
       {/* State-based content */}
-      {state.status === 'idle' && (
+      {isIdle && (
         <IdleState
           onConnect={handlePayClick}
           isConnecting={isConnecting}
-          isPhantomAvailable={isPhantomAvailable}
+          isPhantomAvailable={isPhantomInstalled}
         />
       )}
 
-      {state.status === 'wallet_connected' && (
+      {isWalletConnectedState && (
         <WalletConnectedState
           walletAddress={state.walletAddress}
           onPay={handlePayClick}
           onDisconnect={disconnectWallet}
-          isLoading={false}
+          isLoading={isProcessing}
         />
       )}
 
-      {state.status === 'payment_pending' && (
-        <PaymentPendingState
+      {isPending && (
+        <SupportPendingState
           birdName={birdName}
-          amount={formattedAmount || priceFormatted}
-          destinationWallet={state.paymentIntent?.destinationWallet || null}
-          onSubmitTxHash={handleTxHashSubmit}
+          amount={formattedAmount}
+          status={state.status}
         />
       )}
 
-      {state.status === 'payment_submitted' && (
-        <PaymentSubmittedState />
+      {isSubmitting && (
+        <SupportSubmittingState />
       )}
 
-      {state.status === 'payment_confirmed' && (
-        <PaymentConfirmedState paymentId={state.paymentIntent?.paymentId} />
+      {isCompleted && (
+        <SupportConfirmedState intentId={state.intent?.intentId} />
       )}
 
-      {state.status === 'payment_failed' && (
-        <PaymentFailedState
+      {isFailed && (
+        <SupportFailedState
           error={state.error}
+          errorCode={state.errorCode}
           onRetry={retry}
           onConnectWallet={connectWallet}
         />
       )}
 
       {/* Help link */}
-      {state.status !== 'payment_confirmed' && (
+      {!isCompleted && (
         <DigitalDollarsHelp />
       )}
     </div>
@@ -242,7 +234,7 @@ function DigitalDollarsHelp() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  const { digitalDollarsExplainer } = PAYMENT_UI_COPY;
+  const { digitalDollarsExplainer } = SUPPORT_UI_COPY;
 
   return (
     <div className="payment-flow__help-wrapper" ref={popoverRef}>
@@ -252,7 +244,7 @@ function DigitalDollarsHelp() {
         aria-expanded={isOpen}
       >
         <HelpCircle className="payment-flow__help-icon" />
-        <span>{PAYMENT_UI_COPY.learnMore}</span>
+        <span>{SUPPORT_UI_COPY.learnMore}</span>
       </button>
 
       {isOpen && (
@@ -342,7 +334,7 @@ function IdleState({
         ) : (
           <>
             <Wallet className="payment-flow__button-icon" />
-            <span>{PAYMENT_UI_COPY.walletButton}</span>
+            <span>{SUPPORT_UI_COPY.walletButton}</span>
           </>
         )}
       </button>
@@ -373,7 +365,7 @@ function WalletConnectedState({
       <div className="payment-flow__wallet-info">
         <div className="payment-flow__wallet-connected">
           <CheckCircle className="payment-flow__wallet-icon" />
-          <span>{PAYMENT_UI_COPY.walletConnected}</span>
+          <span>{SUPPORT_UI_COPY.walletConnected}</span>
         </div>
         {displayAddress && (
           <span className="payment-flow__wallet-address">{displayAddress}</span>
@@ -394,12 +386,12 @@ function WalletConnectedState({
         {isLoading ? (
           <>
             <Loader2 className="payment-flow__button-spinner" />
-            <span>Preparing payment...</span>
+            <span>Preparing support...</span>
           </>
         ) : (
           <>
             <DollarSign className="payment-flow__button-icon" />
-            <span>{PAYMENT_UI_COPY.payButton}</span>
+            <span>{SUPPORT_UI_COPY.supportButton}</span>
           </>
         )}
       </button>
@@ -407,148 +399,100 @@ function WalletConnectedState({
   );
 }
 
-function PaymentPendingState({
+function SupportPendingState({
   birdName,
   amount,
-  destinationWallet,
-  onSubmitTxHash,
+  status,
 }: {
   birdName: string;
   amount: string;
-  destinationWallet: string | null;
-  onSubmitTxHash: (txHash: string) => void;
+  status: string;
 }) {
-  const [manualTxHash, setManualTxHash] = useState('');
-  const [showDevInput, setShowDevInput] = useState(false);
+  // Show different messages based on the specific status
+  let message: string = SUPPORT_UI_COPY.supportPending;
+  let detail: string = `Confirm ${amount} to support ${birdName} in your wallet`;
 
-  const handleSubmit = () => {
-    if (manualTxHash.trim()) {
-      onSubmitTxHash(manualTxHash.trim());
-    }
-  };
+  if (status === 'preflight') {
+    message = 'Checking...';
+    detail = 'Verifying your wallet balance';
+  } else if (status === 'creating_intent') {
+    message = 'Preparing...';
+    detail = 'Setting up your support transaction';
+  } else if (status === 'awaiting_signature') {
+    message = 'Sign in wallet';
+    detail = `Approve ${amount} to support ${birdName}`;
+  }
 
   return (
     <div className="payment-flow__state">
       <div className="payment-flow__pending">
         <Loader2 className="payment-flow__pending-spinner" />
-        <p className="payment-flow__pending-text">
-          {PAYMENT_UI_COPY.paymentPending}
-        </p>
-        <p className="payment-flow__pending-detail">
-          Confirm {amount} to support {birdName} in your wallet
-        </p>
-        {destinationWallet && (
-          <p className="payment-flow__pending-wallet">
-            Send to: <code>{destinationWallet.slice(0, 8)}...{destinationWallet.slice(-6)}</code>
-          </p>
-        )}
+        <p className="payment-flow__pending-text">{message}</p>
+        <p className="payment-flow__pending-detail">{detail}</p>
       </div>
-
-      {/* Dev mode: Manual txHash input */}
-      {IS_DEV && (
-        <div className="payment-flow__dev">
-          <button
-            className="payment-flow__dev-toggle"
-            onClick={() => setShowDevInput(!showDevInput)}
-            type="button"
-          >
-            <Terminal className="payment-flow__dev-icon" />
-            <span>Dev: Manual tx submission</span>
-          </button>
-
-          {showDevInput && (
-            <div className="payment-flow__dev-input">
-              <input
-                type="text"
-                placeholder="Enter transaction hash..."
-                value={manualTxHash}
-                onChange={(e) => setManualTxHash(e.target.value)}
-                className="payment-flow__dev-field"
-              />
-              <button
-                className="payment-flow__button payment-flow__button--secondary"
-                onClick={handleSubmit}
-                disabled={!manualTxHash.trim()}
-              >
-                <ArrowRight className="payment-flow__button-icon" />
-                <span>Submit tx hash</span>
-              </button>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
 
-function PaymentSubmittedState() {
+function SupportSubmittingState() {
   return (
     <div className="payment-flow__state">
       <div className="payment-flow__submitted">
         <Loader2 className="payment-flow__submitted-spinner" />
         <p className="payment-flow__submitted-text">
-          {PAYMENT_UI_COPY.paymentSubmitted}
+          {SUPPORT_UI_COPY.supportSubmitted}
         </p>
         <p className="payment-flow__submitted-detail">
-          Verifying your payment...
+          Confirming your support on the blockchain...
         </p>
       </div>
     </div>
   );
 }
 
-function PaymentConfirmedState({ paymentId }: { paymentId?: string }) {
-  const claimUrl = paymentId ? `/payments/claim?pi=${paymentId}` : '/payments/claim';
-
+function SupportConfirmedState({ intentId }: { intentId?: string }) {
   return (
     <div className="payment-flow__state payment-flow__state--success">
       <div className="payment-flow__confirmed">
         <CheckCircle className="payment-flow__confirmed-icon" />
         <p className="payment-flow__confirmed-text">
-          {PAYMENT_UI_COPY.paymentConfirmed}
+          {SUPPORT_UI_COPY.supportConfirmed}
         </p>
-
-        <div className="payment-flow__claim-notice">
-          <AlertTriangle size={16} />
-          <span>
-            <strong>Your support is not complete until you claim it.</strong>
-          </span>
-        </div>
-
-        <a
-          href={claimUrl}
-          className="payment-flow__button payment-flow__button--primary payment-flow__button--large"
-          style={{ marginTop: '0.75rem', textDecoration: 'none' }}
-        >
-          <ArrowRight className="payment-flow__button-icon" />
-          <span>Claim your support now</span>
-        </a>
+        <p className="payment-flow__confirmed-detail">
+          Thank you for supporting this bird!
+        </p>
       </div>
     </div>
   );
 }
 
-function PaymentFailedState({
+function SupportFailedState({
   error,
+  errorCode,
   onRetry,
   onConnectWallet,
 }: {
   error: string | null;
+  errorCode: string | null;
   onRetry: () => void;
   onConnectWallet?: () => void;
 }) {
   const errorLower = error?.toLowerCase() || '';
-  const isWalletIssue = errorLower.includes('wallet') || errorLower.includes('connect');
-  const isInsufficientBalance = errorLower.includes('insufficient') || errorLower.includes('balance');
+  const isWalletIssue = errorLower.includes('wallet') || errorLower.includes('connect') || errorCode === 'WALLET_REQUIRED';
+  const isInsufficientBalance = errorLower.includes('insufficient') || errorCode === 'INSUFFICIENT_USDC';
+  const isInsufficientSol = errorCode === 'INSUFFICIENT_SOL';
   const isUserRejected = errorLower.includes('rejected') || errorLower.includes('cancelled');
   const isNetworkError = errorLower.includes('network') || errorLower.includes('timeout');
 
-  let errorTitle = "We couldn't complete the payment";
+  let errorTitle = "We couldn't complete your support";
   let errorHint = '';
 
   if (isInsufficientBalance) {
     errorTitle = 'Insufficient USDC balance';
     errorHint = 'Add USDC to your wallet and try again.';
+  } else if (isInsufficientSol) {
+    errorTitle = 'Insufficient SOL for fees';
+    errorHint = 'Add a small amount of SOL (~0.01) for transaction fees.';
   } else if (isUserRejected) {
     errorTitle = 'Transaction cancelled';
     errorHint = "No problem — you weren't charged. Try again when ready.";
@@ -560,7 +504,7 @@ function PaymentFailedState({
     errorHint = 'Please reconnect your wallet to continue.';
   }
 
-  const displayError = error || PAYMENT_UI_COPY.errors.generic;
+  const displayError = error || SUPPORT_UI_COPY.errors.generic;
 
   return (
     <div className="payment-flow__state">
@@ -587,7 +531,7 @@ function PaymentFailedState({
           onClick={onRetry}
         >
           <RefreshCw className="payment-flow__button-icon" />
-          <span>{PAYMENT_UI_COPY.retry}</span>
+          <span>{SUPPORT_UI_COPY.retry}</span>
         </button>
       )}
     </div>

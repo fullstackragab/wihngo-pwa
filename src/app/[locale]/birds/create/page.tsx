@@ -3,8 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createBird } from "@/services/bird.service";
-import { uploadFile } from "@/services/api-helper";
+import { createBird, uploadBirdImage } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
 import { usePhantom } from "@/hooks/use-phantom";
 import { Button } from "@/components/ui/button";
@@ -23,11 +22,6 @@ import {
 import Image from "next/image";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
-
-interface UploadResponse {
-  s3Key: string;
-  url: string;
-}
 
 export default function CreateBirdPage() {
   const router = useRouter();
@@ -66,11 +60,6 @@ export default function CreateBirdPage() {
 
   const createBirdMutation = useMutation({
     mutationFn: createBird,
-    onSuccess: (bird) => {
-      queryClient.invalidateQueries({ queryKey: ["myBirds"] });
-      queryClient.invalidateQueries({ queryKey: ["birds"] });
-      router.push(`/birds/${bird.birdId}`);
-    },
     onError: (err) => {
       setError(err instanceof Error ? err.message : "Failed to create bird profile");
     },
@@ -125,37 +114,34 @@ export default function CreateBirdPage() {
     }
 
     try {
-      let imageS3Key: string | undefined;
-
-      // Upload image if selected
-      if (imageFile) {
-        setIsUploading(true);
-        try {
-          const uploadResult = await uploadFile<UploadResponse>(
-            "birds/upload-image",
-            imageFile,
-            "file"
-          );
-          imageS3Key = uploadResult.s3Key;
-        } catch (uploadErr) {
-          console.error("Image upload failed:", uploadErr);
-          setError(tErrors("uploadFailed"));
-          setIsUploading(false);
-          return;
-        }
-        setIsUploading(false);
-      }
-
-      // Create bird
-      await createBirdMutation.mutateAsync({
+      // Step 1: Create bird first (without image)
+      const bird = await createBirdMutation.mutateAsync({
         name: name.trim(),
         species: species.trim(),
         description: description.trim() || undefined,
         location: location.trim() || undefined,
         age: age.trim() || undefined,
         walletAddress: wallet.trim(),
-        imageS3Key,
       });
+
+      // Step 2: Upload image if selected (using bird ID)
+      if (imageFile && bird.birdId) {
+        setIsUploading(true);
+        try {
+          await uploadBirdImage(bird.birdId, imageFile);
+        } catch (uploadErr) {
+          console.error("Image upload failed:", uploadErr);
+          // Don't block navigation - bird was created successfully
+          // Image can be added later from edit page
+        }
+        setIsUploading(false);
+      }
+
+      // Step 3: Invalidate queries and navigate
+      queryClient.invalidateQueries({ queryKey: ["myBirds"] });
+      queryClient.invalidateQueries({ queryKey: ["birds"] });
+      queryClient.invalidateQueries({ queryKey: ["bird", bird.birdId] });
+      router.push(`/birds/${bird.birdId}`);
     } catch {
       // Error handled by mutation
     }

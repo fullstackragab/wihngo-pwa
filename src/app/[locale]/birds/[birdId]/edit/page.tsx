@@ -3,8 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getBird, updateBird, updateBirdSupportSettings } from "@/services/bird.service";
-import { uploadFile } from "@/services/api-helper";
+import { getBird, updateBird, updateBirdSupportSettings, uploadBirdImage } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -157,11 +156,7 @@ export default function EditBirdPage() {
 
       // Upload new image if selected
       if (selectedImage) {
-        const uploadResult = await uploadFile<{ s3Key: string; url: string }>(
-          `birds/${birdId}/image`,
-          selectedImage,
-          "file"
-        );
+        const uploadResult = await uploadBirdImage(birdId as string, selectedImage);
         imageS3Key = uploadResult.s3Key;
       }
 
