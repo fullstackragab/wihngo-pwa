@@ -236,21 +236,26 @@ export function getConnectedWallet(): string | null {
 export interface BalanceCheckResult {
   hasEnoughUsdc: boolean;
   hasEnoughSol: boolean;
-  usdcBalance: number;
+  /** USDC balance in cents */
+  usdcBalanceCents: number;
   solBalance: number;
-  requiredUsdc: number;
+  /** Required amount in cents */
+  requiredCents: number;
   requiredSol: number;
   error?: string;
 }
 
 /**
  * Check if wallet has enough USDC and SOL for a transaction
+ * @param walletAddress - Wallet public key
+ * @param amountCents - Required amount in cents
  */
 export async function checkBalanceForPayment(
   walletAddress: string,
-  amountUsdc: number
+  amountCents: number
 ): Promise<BalanceCheckResult> {
   const REQUIRED_SOL_FOR_FEES = 0.005;
+  const requiredUsdc = amountCents / 100;
 
   try {
     const config = await getSolanaConfig();
@@ -267,8 +272,8 @@ export async function checkBalanceForPayment(
     const solLamports = await connection.getBalance(walletPubkey);
     const solBalance = solLamports / 1e9;
 
-    // Get USDC balance
-    let usdcBalance = 0;
+    // Get USDC balance (returns in USDC, convert to cents)
+    let usdcBalanceUsdc = 0;
     try {
       const ata = await getAssociatedTokenAddress(
         mintPubkey,
@@ -277,17 +282,20 @@ export async function checkBalanceForPayment(
         TOKEN_PROGRAM_ID
       );
       const tokenAccount = await connection.getTokenAccountBalance(ata);
-      usdcBalance = tokenAccount.value.uiAmount || 0;
+      usdcBalanceUsdc = tokenAccount.value.uiAmount || 0;
     } catch {
-      usdcBalance = 0;
+      usdcBalanceUsdc = 0;
     }
 
+    // Convert USDC balance to cents for return
+    const usdcBalanceCents = Math.round(usdcBalanceUsdc * 100);
+
     return {
-      hasEnoughUsdc: usdcBalance >= amountUsdc,
+      hasEnoughUsdc: usdcBalanceUsdc >= requiredUsdc,
       hasEnoughSol: solBalance >= REQUIRED_SOL_FOR_FEES,
-      usdcBalance,
+      usdcBalanceCents,
       solBalance,
-      requiredUsdc: amountUsdc,
+      requiredCents: amountCents,
       requiredSol: REQUIRED_SOL_FOR_FEES,
     };
   } catch (err) {
@@ -295,9 +303,9 @@ export async function checkBalanceForPayment(
     return {
       hasEnoughUsdc: false,
       hasEnoughSol: false,
-      usdcBalance: 0,
+      usdcBalanceCents: 0,
       solBalance: 0,
-      requiredUsdc: amountUsdc,
+      requiredCents: amountCents,
       requiredSol: REQUIRED_SOL_FOR_FEES,
       error: 'Failed to check balance. Please try again.',
     };
@@ -312,6 +320,23 @@ export interface TransactionParams {
   fromWallet: string;
   toWallet: string;
   amountUsdc: number;
+  paymentId: string;
+}
+
+/**
+ * Parameters for dual transfer (bird support + platform support)
+ * All amounts in cents (USD cents) - converted to USDC only for transaction
+ */
+export interface DualTransferParams {
+  fromWallet: string;
+  /** Bird's wallet for bird support */
+  birdWallet: string;
+  /** Platform wallet for Wihngo support (from config) */
+  platformWallet: string;
+  /** Bird support amount in cents */
+  birdAmountCents: number;
+  /** Platform support amount in cents (optional) */
+  platformAmountCents?: number;
   paymentId: string;
 }
 
@@ -450,6 +475,208 @@ export async function buildUsdcTransferTransaction(
   transaction.recentBlockhash = blockhash;
   transaction.lastValidBlockHeight = lastValidBlockHeight;
   transaction.feePayer = fromPubkey;
+
+  return { transaction, connection };
+}
+
+/**
+ * Helper to add USDC transfer instruction to a transaction
+ */
+async function addUsdcTransferInstruction(
+  transaction: Transaction,
+  connection: Connection,
+  fromPubkey: PublicKey,
+  toPubkey: PublicKey,
+  mintPubkey: PublicKey,
+  amountUsdc: number
+): Promise<void> {
+  const fromATA = await getAssociatedTokenAddress(
+    mintPubkey,
+    fromPubkey,
+    false,
+    TOKEN_PROGRAM_ID
+  );
+
+  const toATA = await getAssociatedTokenAddress(
+    mintPubkey,
+    toPubkey,
+    false,
+    TOKEN_PROGRAM_ID
+  );
+
+  // Check if destination ATA exists, create if not
+  try {
+    await getAccount(connection, toATA);
+  } catch {
+    transaction.add(
+      createAssociatedTokenAccountInstruction(
+        fromPubkey,
+        toATA,
+        toPubkey,
+        mintPubkey,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      )
+    );
+  }
+
+  const amountInSmallestUnits = BigInt(Math.round(amountUsdc * 10 ** USDC_DECIMALS));
+
+  transaction.add(
+    createTransferCheckedInstruction(
+      fromATA,
+      mintPubkey,
+      toATA,
+      fromPubkey,
+      amountInSmallestUnits,
+      USDC_DECIMALS
+    )
+  );
+}
+
+/**
+ * Build dual USDC transfer transaction (bird support + optional platform support)
+ *
+ * Creates a single transaction with one or two transfer instructions:
+ * 1. Transfer to bird's wallet (bird support)
+ * 2. Transfer to platform wallet (Wihngo support) - if platformAmountCents > 0
+ *
+ * All amounts are in cents - converted to USDC (cents/100) for the transaction.
+ * Includes memo with paymentId for backend verification.
+ */
+export async function buildDualTransferTransaction(
+  params: DualTransferParams
+): Promise<BuiltTransaction> {
+  const {
+    fromWallet,
+    birdWallet,
+    platformWallet,
+    birdAmountCents,
+    platformAmountCents,
+    paymentId,
+  } = params;
+
+  // Calculate total amount in cents
+  const totalAmountCents = birdAmountCents + (platformAmountCents || 0);
+
+  // Validate amounts (in cents)
+  if (typeof birdAmountCents !== 'number' || isNaN(birdAmountCents) || birdAmountCents <= 0) {
+    throw new Error(`Invalid bird support amount: ${birdAmountCents} cents. Amount must be positive.`);
+  }
+
+  if (platformAmountCents !== undefined && platformAmountCents < 0) {
+    throw new Error(`Invalid platform support amount: ${platformAmountCents} cents. Amount cannot be negative.`);
+  }
+
+  // Convert cents to USDC for display/logging (1 USDC = 100 cents)
+  const birdAmountUsdc = birdAmountCents / 100;
+  const platformAmountUsdc = platformAmountCents ? platformAmountCents / 100 : 0;
+  const totalAmountUsdc = totalAmountCents / 100;
+
+  const config = await getSolanaConfig();
+
+  const connection = new Connection(
+    config.rpcUrl,
+    'processed' as Commitment
+  );
+
+  const fromPubkey = new PublicKey(fromWallet);
+  const birdPubkey = new PublicKey(birdWallet);
+  const platformPubkey = new PublicKey(platformWallet);
+  const mintPubkey = new PublicKey(config.usdcMint);
+
+  console.log('[buildDualTransferTransaction] Pre-flight checks:');
+  console.log('  Network:', config.network);
+  console.log('  From wallet:', fromPubkey.toBase58());
+  console.log('  Bird wallet:', birdPubkey.toBase58());
+  console.log('  Platform wallet:', platformPubkey.toBase58());
+  console.log('  Bird amount:', birdAmountCents, 'cents ($' + birdAmountUsdc.toFixed(2) + ')');
+  console.log('  Platform amount:', platformAmountCents || 0, 'cents ($' + platformAmountUsdc.toFixed(2) + ')');
+  console.log('  Total amount:', totalAmountCents, 'cents ($' + totalAmountUsdc.toFixed(2) + ')');
+
+  // Check SOL balance for fees (slightly higher for dual transfer)
+  const MIN_SOL_FOR_FEES = 7000000; // 0.007 SOL for potential 2 ATA creations
+  try {
+    const solBalance = await connection.getBalance(fromPubkey);
+    if (solBalance < MIN_SOL_FOR_FEES) {
+      const error = new Error(`Insufficient SOL for transaction fees. Need ~0.007 SOL.`);
+      (error as Error & { code: string }).code = 'INSUFFICIENT_SOL';
+      throw error;
+    }
+  } catch (e) {
+    if ((e as Error & { code?: string }).code === 'INSUFFICIENT_SOL') throw e;
+    console.warn('Could not check SOL balance:', e);
+  }
+
+  // Check source USDC account has enough for total
+  const fromATA = await getAssociatedTokenAddress(
+    mintPubkey,
+    fromPubkey,
+    false,
+    TOKEN_PROGRAM_ID
+  );
+
+  const totalInSmallestUnits = BigInt(Math.round(totalAmountUsdc * 10 ** USDC_DECIMALS));
+
+  try {
+    const fromAccount = await getAccount(connection, fromATA);
+    if (Number(fromAccount.amount) < totalInSmallestUnits) {
+      const balance = Number(fromAccount.amount) / 10 ** USDC_DECIMALS;
+      const error = new Error(`Insufficient USDC balance. Have ${balance.toFixed(2)}, need ${totalAmountUsdc.toFixed(2)} USDC.`);
+      (error as Error & { code: string }).code = 'INSUFFICIENT_USDC';
+      throw error;
+    }
+  } catch (e) {
+    if ((e as Error & { code?: string }).code === 'INSUFFICIENT_USDC') throw e;
+    const error = new Error('No USDC account found. Please add USDC to your wallet first.');
+    (error as Error & { code: string }).code = 'NO_USDC_ACCOUNT';
+    throw error;
+  }
+
+  // Create transaction
+  const transaction = new Transaction();
+
+  // 1. Add bird support transfer
+  await addUsdcTransferInstruction(
+    transaction,
+    connection,
+    fromPubkey,
+    birdPubkey,
+    mintPubkey,
+    birdAmountUsdc
+  );
+  console.log('  Added bird support transfer instruction');
+
+  // 2. Add platform support transfer (if amount > 0)
+  if (platformAmountCents && platformAmountCents > 0) {
+    await addUsdcTransferInstruction(
+      transaction,
+      connection,
+      fromPubkey,
+      platformPubkey,
+      mintPubkey,
+      platformAmountUsdc
+    );
+    console.log('  Added platform support transfer instruction');
+  }
+
+  // 3. Add memo instruction for reference binding
+  const memoData = `wihngo:${paymentId}`;
+  transaction.add(
+    new TransactionInstruction({
+      keys: [],
+      programId: MEMO_PROGRAM_ID,
+      data: Buffer.from(memoData, 'utf-8'),
+    })
+  );
+
+  // Set transaction metadata
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+  transaction.recentBlockhash = blockhash;
+  transaction.lastValidBlockHeight = lastValidBlockHeight;
+  transaction.feePayer = fromPubkey;
+
+  console.log('[buildDualTransferTransaction] Transaction built with', transaction.instructions.length, 'instructions');
 
   return { transaction, connection };
 }
@@ -707,6 +934,22 @@ export interface PaymentExecutionParams {
   redirectPath: string;
 }
 
+/**
+ * Parameters for dual payment execution (bird support + platform support)
+ * All amounts in cents - converted to USDC only for transaction
+ */
+export interface DualPaymentExecutionParams {
+  fromWallet: string;
+  /** Bird's wallet for bird support */
+  birdWallet: string;
+  /** Bird support amount in cents */
+  birdAmountCents: number;
+  /** Platform support amount in cents (optional) */
+  platformAmountCents?: number;
+  paymentId: string;
+  redirectPath: string;
+}
+
 export interface PaymentExecutionResult {
   success: boolean;
   signature?: string;
@@ -778,6 +1021,88 @@ export async function executePayment(
   }
 }
 
+/**
+ * Execute dual payment (bird support + optional platform support)
+ *
+ * Creates a single transaction with one or two transfers:
+ * 1. Transfer to bird's wallet (bird support)
+ * 2. Transfer to platform wallet (Wihngo support) - if platformAmountCents > 0
+ *
+ * All amounts in cents - converted to USDC only for transaction.
+ * Handles both desktop and mobile flows.
+ */
+export async function executeDualPayment(
+  params: DualPaymentExecutionParams
+): Promise<PaymentExecutionResult> {
+  const {
+    fromWallet,
+    birdWallet,
+    birdAmountCents,
+    platformAmountCents,
+    paymentId,
+    redirectPath,
+  } = params;
+
+  try {
+    // Get platform wallet from config
+    const config = await getSolanaConfig();
+
+    const { transaction, connection } = await buildDualTransferTransaction({
+      fromWallet,
+      birdWallet,
+      platformWallet: config.platformWallet,
+      birdAmountCents,
+      platformAmountCents,
+      paymentId,
+    });
+
+    // Check if mobile
+    if (isMobileDevice() && !isPhantomBrowser()) {
+      const deepLinkUrl = await buildTransactionDeepLinkAsync({
+        transaction,
+        redirectPath,
+        session: paymentId,
+      });
+
+      return {
+        success: true,
+        deepLinkUrl,
+      };
+    }
+
+    // Desktop: Sign and send directly
+    const result = await signAndSendTransactionDesktop(transaction, connection);
+
+    return {
+      success: result.success,
+      signature: result.signature,
+      error: result.error,
+      errorCode: result.errorCode,
+    };
+  } catch (err) {
+    const error = err as Error & { code?: string };
+    console.error('[executeDualPayment] Error:', error);
+
+    if (error.code === 'INSUFFICIENT_USDC') {
+      return { success: false, error: error.message, errorCode: 'INSUFFICIENT_USDC' };
+    }
+
+    if (error.code === 'NO_USDC_ACCOUNT') {
+      return { success: false, error: error.message, errorCode: 'NO_USDC_ACCOUNT' };
+    }
+
+    if (error.code === 'INSUFFICIENT_SOL') {
+      return { success: false, error: error.message, errorCode: 'INSUFFICIENT_SOL' };
+    }
+
+    return {
+      success: false,
+      error: error.message || 'Failed to prepare transaction. Please try again.',
+      errorCode: 'UNKNOWN',
+    };
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
@@ -795,6 +1120,14 @@ export function formatWalletAddress(address: string, chars = 4): string {
  */
 export function formatUsdc(amount: number): string {
   return `$${amount.toFixed(2)}`;
+}
+
+/**
+ * Format cents amount for display as USD
+ * @param cents - Amount in cents (e.g., 999 = $9.99)
+ */
+export function formatCentsAsUsd(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
 }
 
 export { USDC_DECIMALS };

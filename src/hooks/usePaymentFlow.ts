@@ -18,6 +18,7 @@ import {
   getConnectedWallet,
   isPhantomInstalled,
   executePayment,
+  executeDualPayment,
 } from '@/lib/solana/phantom';
 
 /**
@@ -253,35 +254,28 @@ export function usePaymentFlow({
       });
       console.log('[usePaymentFlow] Payment intent:', intent);
 
-      // Calculate amountUsdc from amountCents if not provided
-      let amountUsdc = intent.amountUsdc;
-      if (!amountUsdc && intent.amountCents) {
-        amountUsdc = intent.amountCents / 100;
-      }
-
-      if (!amountUsdc || amountUsdc <= 0) {
+      // Validate amounts (in cents)
+      if (!intent.amountCents || intent.amountCents <= 0) {
         throw new Error('Invalid payment amount received from server.');
       }
 
-      // Determine destination wallet
-      let destinationWallet = intent.destinationWallet;
-      if (paymentConfig?.platformWallet) {
-        destinationWallet = paymentConfig.platformWallet;
-      }
+      // intent.destinationWallet is the bird's wallet
+      const birdWallet = intent.destinationWallet;
 
       // Validate destination is not the user's own wallet
-      if (destinationWallet === state.walletAddress) {
+      if (birdWallet === state.walletAddress) {
         throw new Error('Invalid payment destination. Please contact support.');
       }
 
-      const augmentedIntent = { ...intent, amountUsdc, destinationWallet };
-      updateState({ paymentIntent: augmentedIntent });
+      updateState({ paymentIntent: intent });
 
-      // Execute payment
-      const result = await executePayment({
+      // Execute dual payment (bird support + optional platform support)
+      // All amounts in cents - converted to USDC only for display/transaction
+      const result = await executeDualPayment({
         fromWallet: state.walletAddress,
-        toWallet: destinationWallet,
-        amountUsdc,
+        birdWallet,
+        birdAmountCents: intent.amountCents,
+        platformAmountCents: intent.wihngoAmountCents,
         paymentId: intent.paymentId,
         redirectPath: `/payments/claim?pi=${intent.paymentId}`,
       });

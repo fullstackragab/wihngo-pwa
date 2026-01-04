@@ -27,12 +27,15 @@ export type PaymentFlowStatus =
 /**
  * Payment intent from backend
  * POST /api/payments/intents
+ *
+ * Supports dual transfers: bird support + optional platform support
  */
 export interface PaymentIntent {
   paymentId: string;              // Internal payment ID for tracking
-  amountCents: number;            // Amount in USD cents (display as $X.XX)
-  amountUsdc?: number;            // USDC amount (1 USDC = 100 cents, 6 decimals)
-  destinationWallet: string;      // Platform's Solana wallet address
+  amountCents: number;            // Bird support amount in USD cents
+  wihngoAmountCents?: number;     // Optional platform support amount in USD cents
+  currency: string;               // Currency code (USD)
+  destinationWallet: string;      // Bird's receiving wallet address
   tokenMint: string;              // USDC token mint address (for verification)
   expiresAt: string;              // ISO timestamp, intent expires after this
   birdId: string;                 // Bird being supported
@@ -55,7 +58,7 @@ export interface PaymentConfirmRequest {
  */
 export interface PaymentConfirmResponse {
   paymentId: string;
-  status: 'confirmed' | 'pending' | 'failed';
+  status: 'confirmed' | 'pending' | 'failed' | 'expired';
   isSuccess: boolean;
   failureReason?: string;
   confirmedAt?: string;
@@ -137,11 +140,13 @@ export interface CreateManualPaymentRequest {
 
 /**
  * Claim payment response
+ * POST /api/payments/{id}/claim
  */
 export interface ClaimPaymentResponse {
+  success: boolean;
   paymentId: string;
-  birdId?: string;
-  message: string;
+  birdId: string;
+  amountCents: number;
 }
 
 /**
