@@ -1,0 +1,124 @@
+.claim-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: #f9fafb;
+}
+
+.claim-page__card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 420px;
+  padding: 2rem;
+}
+
+.claim-page__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.claim-page__icon {
+  width: 48px;
+  height: 48px;
+}
+
+.claim-page__icon--loading {
+  color: #6b7280;
+  animation: spin 1s linear infinite;
+}
+
+.claim-page__icon--info {
+  color: #3b82f6;
+}
+
+.claim-page__icon--success {
+  color: #10b981;
+}
+
+.claim-page__icon--warning {
+  color: #f59e0b;
+}
+
+.claim-page__icon--error {
+  color: #ef4444;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.claim-page__title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.claim-page__subtitle {
+  font-size: 1rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.claim-page__text {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0.5rem 0 0 0;
+  line-height: 1.5;
+}
+
+.claim-page__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.claim-page__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  text-decoration: none;
+}
+
+.claim-page__btn--primary {
+  background: #10b981;
+  color: white;
+}
+
+.claim-page__btn--primary:hover {
+  background: #059669;
+}
+
+.claim-page__btn--secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.claim-page__btn--secondary:hover {
+  background: #e5e7eb;
+}
+
+.claim-page__note {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  margin: 1rem 0 0 0;
+}

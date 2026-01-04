@@ -79,6 +79,31 @@ export async function publicGet<T>(url: string): Promise<T> {
   return await response.json();
 }
 
+export async function publicPost<T>(url: string, data: unknown): Promise<T> {
+  const response = await publicFetch(url, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    let errorData;
+    const responseText = await response.text();
+    try {
+      errorData = JSON.parse(responseText);
+    } catch {
+      errorData = responseText;
+    }
+    throw new ApiError(response.status, response.statusText, errorData);
+  }
+
+  if (response.status === 204 || response.status === 201) {
+    const text = await response.text();
+    return (text ? JSON.parse(text) : {}) as T;
+  }
+
+  return await response.json();
+}
+
 export async function authenticatedFetch(
   url: string,
   options: RequestInit = {}
