@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { BottomNav } from "@/components/bottom-nav";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { motion } from "motion/react";
+import { isMobileDevice } from "@/lib/phantom/platform";
 
 export default function SupportWihngoPage() {
   const router = useRouter();
@@ -16,7 +17,14 @@ export default function SupportWihngoPage() {
   const amountNum = parseFloat(amount) || 0;
 
   const handleSendSupport = () => {
-    // Navigate to confirm with wihngo-only support
+    // On mobile, use manual QR payment flow
+    if (isMobileDevice()) {
+      const wihngoAmountCents = Math.round(amountNum * 100);
+      router.push(`/payments/manual?birdId=wihngo&amountCents=0&wihngoAmountCents=${wihngoAmountCents}`);
+      return;
+    }
+
+    // On desktop, use wallet connection flow
     router.push(`/birds/wihngo/support/confirm?birdAmount=0&wihngoAmount=${amountNum}`);
   };
 

@@ -19,6 +19,7 @@ import {
   MIN_BIRD_AMOUNT,
   MAX_BIRD_AMOUNT,
 } from "@/types/support";
+import { isMobileDevice } from "@/lib/phantom/platform";
 
 function SupportContent() {
   const router = useRouter();
@@ -139,6 +140,18 @@ function SupportContent() {
 
   const handleContinue = () => {
     if (!isValidAmount) return;
+
+    // On mobile, use manual QR payment flow
+    if (isMobileDevice()) {
+      const amountCents = Math.round(birdAmount * 100);
+      const wihngoAmountCents = Math.round(currentWihngoAmount * 100);
+      router.push(
+        `/payments/manual?birdId=${birdId}&amountCents=${amountCents}&wihngoAmountCents=${wihngoAmountCents}`
+      );
+      return;
+    }
+
+    // On desktop, use wallet connection flow
     router.push(
       `/birds/${birdId}/support/confirm?birdAmount=${birdAmount}&wihngoAmount=${currentWihngoAmount}`
     );
