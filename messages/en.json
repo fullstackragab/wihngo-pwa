@@ -159,6 +159,7 @@
     "exploreSection": "Explore",
     "knowledgeHub": "Knowledge Hub",
     "knowledgeHubDesc": "Guides, species, and bird care wisdom",
+    "initiatives": "Initiatives",
     "initiativesDesc": "Real solutions for better bird life",
     "learnMore": "Learn More",
     "aboutWihngo": "About Wihngo",
@@ -169,6 +170,8 @@
     "supportBirdsDesc": "How your help makes a difference",
     "chickenHappiness": "Chicken Happiness",
     "chickenHappinessDesc": "The right to a better life",
+    "lifeBeforeFate": "How to Make Chickens' Lives Better",
+    "lifeBeforeFateDesc": "Practical steps for a more compassionate life",
     "ourPrinciples": "Our Principles",
     "ourPrinciplesDesc": "What we believe and how we operate",
     "manifesto": "Manifesto",
@@ -499,6 +502,20 @@
     "termsOfService": "Terms of Service",
     "privacyPolicy": "Privacy Policy",
     "version": "Version"
+  },
+  "lifeBeforeFate": {
+    "title": "How to Make Chickens' Lives Better",
+    "intro": "Many chickens live lives deprived of the simplest elements of nature, ending in slaughter.",
+    "howTitle": "How can we make chickens' lives better?",
+    "point1Title": "Improve living conditions",
+    "point1Content": "Move away from battery cages\nProvide space for movement, sunlight, and fresh air\nAllow them to behave naturally:\nForaging, scratching, spreading their wings",
+    "point2Title": "Free-range or pasture-raised",
+    "point2Content": "Free-range or Pasture-raised farming\nEven if slaughter comes at the end, the moral difference between a natural life and a life of suffering is significant",
+    "point3Title": "Support alternatives",
+    "point3Content": "Humane farms\nAnimal welfare initiatives",
+    "mainIdeaTitle": "The Main Idea",
+    "mainIdeaContent": "We are not only responsible for the ending, but for the life that precedes it.",
+    "conclusion": "Even if slaughter is part of reality,\ncompassion before the end is what defines our humanity."
   },
   "errors": {
     "pageNotFound": "Page not found",

@@ -21,7 +21,8 @@
       "Bash(npx image-size:*)",
       "Bash(file:*)",
       "Bash(dir:*)",
-      "Bash(dir \"C:\\\\_companies\\\\wihngo\\\\*.zip\")"
+      "Bash(dir \"C:\\\\_companies\\\\wihngo\\\\*.zip\")",
+      "WebFetch(domain:next-intl.dev)"
     ]
   }
 }

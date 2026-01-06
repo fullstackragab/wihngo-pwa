@@ -283,7 +283,7 @@ export default function ProfilePage() {
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <Lightbulb className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="mb-1">{tCommon("initiatives") || "Initiatives"}</h4>
+                <h4 className="mb-1">{t("initiatives")}</h4>
                 <p className="text-sm text-muted-foreground">
                   {t("initiativesDesc")}
                 </p>
@@ -337,6 +337,18 @@ export default function ProfilePage() {
                 <h4 className="mb-1">{t("chickenHappiness")}</h4>
                 <p className="text-sm text-muted-foreground">
                   {t("chickenHappinessDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/life-before-fate">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{t("lifeBeforeFate")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {t("lifeBeforeFateDesc")}
                 </p>
               </div>
             </div>
