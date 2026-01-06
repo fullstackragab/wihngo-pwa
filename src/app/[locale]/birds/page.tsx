@@ -8,13 +8,15 @@ import { BirdCard } from "@/components/bird-card";
 import { BottomNav } from "@/components/bottom-nav";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, ArrowLeft, Bird } from "lucide-react";
+import { ArrowLeft, Bird as BirdIcon, HandHeart, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
+
+type FilterType = "all" | "needs-support" | "funded";
 
 export default function BirdsPage() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState<FilterType>("all");
   const [page, setPage] = useState(1);
   const t = useTranslations("birds");
 
@@ -24,46 +26,72 @@ export default function BirdsPage() {
     queryFn: () => getBirds(page, 20),
   });
 
-  const { data: searchResults, isLoading: searchLoading } = useQuery({
-    queryKey: ["birdsSearch", searchQuery],
-    queryFn: () => searchBirds(searchQuery),
-    enabled: searchQuery.length >= 2,
-  });
+  const birds = data?.items;
+  const loading = isLoading;
 
-  const birds = searchQuery.length >= 2 ? searchResults : data?.items;
-  const loading = isLoading || searchLoading;
+  // Filter tabs configuration
+  const filterTabs: { key: FilterType; label: string }[] = [
+    { key: "all", label: t("filterAll") },
+    { key: "needs-support", label: t("filterNeedsSupport") },
+    { key: "funded", label: t("filterFunded") },
+  ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-neutral-50">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3 mb-4">
-            <Button
-              variant="ghost"
-              size="icon"
+      <div className="bg-white border-b border-neutral-200 sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="flex items-center gap-4 mb-4">
+            <button
               onClick={() => router.push("/")}
-              className="rounded-full"
+              className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h2>{t("exploreBirds")}</h2>
+              <ArrowLeft className="w-5 h-5 text-neutral-700" />
+            </button>
+            <h1 className="text-2xl font-semibold text-neutral-900">
+              {t("chooseToSupport")}
+            </h1>
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder={t("searchBirds")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 rounded-full bg-input-background border-border/50"
-            />
+
+          {/* Filter Tabs */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            {filterTabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setFilter(tab.key)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                  filter === tab.key
+                    ? "bg-primary text-white"
+                    : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
+      {/* Birds Need Support Banner */}
+      <div className="max-w-6xl mx-auto px-6 pt-6">
+        <Link href="/birds/needs-support">
+          <div className="flex items-center gap-4 p-4 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors cursor-pointer">
+            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <HandHeart className="w-6 h-6 text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-neutral-900">{t("filterNeedsSupport")}</p>
+              <p className="text-sm text-neutral-600">
+                Help birds that need support this week - fair round-based system
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-neutral-400" />
+          </div>
+        </Link>
+      </div>
+
       {/* Bird Grid */}
-      <div className="max-w-2xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-6 py-8">
         {loading ? (
           <div className="flex justify-center py-12">
             <LoadingSpinner size="lg" />
@@ -73,19 +101,15 @@ export default function BirdsPage() {
             <p className="text-destructive">{t("loadFailed")}</p>
           </div>
         ) : !birds || birds.length === 0 ? (
-          <div className="text-center py-12">
-            <Bird className="w-16 h-16 text-muted mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">
-              {searchQuery ? t("noBirdsFound") : t("noBirdsYet")}
+          <div className="text-center py-16 text-neutral-600">
+            <BirdIcon className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-neutral-900 mb-2">
+              {t("noBirdsYet")}
             </h3>
-            <p className="text-muted-foreground">
-              {searchQuery
-                ? t("tryDifferentSearch")
-                : t("checkBackSoon")}
-            </p>
+            <p>{t("checkBackSoon")}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {birds.map((bird) => (
               <BirdCard key={bird.birdId} bird={bird} variant="feed" />
             ))}
@@ -93,12 +117,12 @@ export default function BirdsPage() {
         )}
 
         {/* Load More */}
-        {data?.items && data.items.length > 0 && data.totalCount > page * 20 && !searchQuery && (
-          <div className="text-center mt-6">
+        {data?.items && data.items.length > 0 && data.totalCount > page * 20 && (
+          <div className="text-center mt-8">
             <Button
               variant="outline"
               onClick={() => setPage((p) => p + 1)}
-              className="rounded-full"
+              className="rounded-xl px-8"
             >
               {t("loadMore")}
             </Button>

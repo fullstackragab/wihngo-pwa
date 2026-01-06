@@ -3,67 +3,83 @@
 :root {
   --font-size: 16px;
 
-  /* Figma Design System Colors - Nature Green Palette */
-  --background: #faf9f7;
-  --foreground: #4a4438;
+  /* Figma Design System Colors - Green Theme */
+  --background: #ffffff;
+  --foreground: #171717;
 
-  /* Brand Colors */
-  --primary: #7a9b76;
+  /* Brand Colors - Green-600 based */
+  --primary: #16a34a;
   --primary-foreground: #ffffff;
-  --secondary: #e8dcc8;
-  --secondary-foreground: #4a4438;
-  --accent: #c4dbc0;
-  --accent-foreground: #4a4438;
+  --primary-hover: #15803d;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #171717;
+  --accent: #f0fdf4;
+  --accent-foreground: #171717;
 
   /* Neutral Colors */
-  --muted: #f5f0e8;
-  --muted-foreground: #8b8373;
+  --muted: #fafafa;
+  --muted-foreground: #525252;
   --card: #ffffff;
-  --card-foreground: #4a4438;
+  --card-foreground: #171717;
   --popover: #ffffff;
-  --popover-foreground: #4a4438;
-  --border: rgba(122, 155, 118, 0.15);
+  --popover-foreground: #171717;
+  --border: #e5e5e5;
   --input: transparent;
-  --input-background: #ffffff;
-  --switch-background: #cbced4;
+  --input-background: #fafafa;
+  --switch-background: #d4d4d4;
 
   /* Semantic Colors */
-  --destructive: #d4183d;
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --success: #7a9b76;
-  --warning: #F6E6A8;
-  --error: #d4183d;
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --error: #dc2626;
 
   /* Special Colors */
-  --heart-red: #d4183d;
-  --support-green: #7a9b76;
+  --heart-red: #dc2626;
+  --support-green: #16a34a;
+
+  /* Green shades for backgrounds */
+  --green-50: #f0fdf4;
+  --green-100: #dcfce7;
+  --green-600: #16a34a;
+  --green-700: #15803d;
+
+  /* Neutral shades */
+  --neutral-50: #fafafa;
+  --neutral-100: #f5f5f5;
+  --neutral-200: #e5e5e5;
+  --neutral-500: #737373;
+  --neutral-600: #525252;
+  --neutral-700: #404040;
+  --neutral-900: #171717;
 
   /* Ring/Focus */
-  --ring: #7a9b76;
+  --ring: #16a34a;
 
   /* Font weights */
   --font-weight-medium: 500;
   --font-weight-normal: 400;
 
   /* Chart Colors */
-  --chart-1: #7a9b76;
-  --chart-2: #9bb897;
-  --chart-3: #c4dbc0;
-  --chart-4: #e8dcc8;
-  --chart-5: #f5f0e8;
+  --chart-1: #16a34a;
+  --chart-2: #22c55e;
+  --chart-3: #4ade80;
+  --chart-4: #86efac;
+  --chart-5: #dcfce7;
 
   /* Radius */
-  --radius: 1rem;
+  --radius: 0.75rem;
 
   /* Sidebar */
-  --sidebar: #faf9f7;
-  --sidebar-foreground: #4a4438;
-  --sidebar-primary: #7a9b76;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #171717;
+  --sidebar-primary: #16a34a;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f5f0e8;
-  --sidebar-accent-foreground: #4a4438;
-  --sidebar-border: rgba(122, 155, 118, 0.15);
-  --sidebar-ring: #7a9b76;
+  --sidebar-accent: #f0fdf4;
+  --sidebar-accent-foreground: #171717;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #16a34a;
 }
 
 @theme inline {
@@ -71,6 +87,7 @@
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-accent: var(--accent);
@@ -89,6 +106,17 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-heart-red: var(--heart-red);
   --color-support-green: var(--support-green);
+  --color-green-50: var(--green-50);
+  --color-green-100: var(--green-100);
+  --color-green-600: var(--green-600);
+  --color-green-700: var(--green-700);
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-900: var(--neutral-900);
   --color-ring: var(--ring);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);

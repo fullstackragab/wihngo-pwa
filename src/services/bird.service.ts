@@ -1,5 +1,5 @@
 import { apiHelper, publicGet, uploadFile } from "./api-helper";
-import { Bird, CreateBirdDto, UpdateBirdDto, Memorial, MemorialMessage, CreateMemorialMessageDto } from "@/types/bird";
+import { Bird, CreateBirdDto, UpdateBirdDto, UpdateBirdVisibilityDto, UpdateBirdVisibilityResponse, UpdateBirdNeedsSupportDto, UpdateBirdNeedsSupportResponse, BirdsNeedsSupportResponse, CanSupportBirdResponse, Memorial, MemorialMessage, CreateMemorialMessageDto } from "@/types/bird";
 
 interface BirdListResponse {
   items: Bird[];
@@ -27,6 +27,26 @@ export async function updateBird(birdId: string, data: UpdateBirdDto): Promise<B
 
 export async function updateBirdSupportSettings(birdId: string, supportEnabled: boolean): Promise<void> {
   return apiHelper.patch(`birds/${birdId}/support-settings`, { supportEnabled });
+}
+
+// Update bird visibility (hide/show from public listings)
+export async function updateBirdVisibility(birdId: string, data: UpdateBirdVisibilityDto): Promise<UpdateBirdVisibilityResponse> {
+  return apiHelper.patch<UpdateBirdVisibilityResponse>(`birds/${birdId}/visibility`, data);
+}
+
+// Update bird needs-support status
+export async function updateBirdNeedsSupport(birdId: string, data: UpdateBirdNeedsSupportDto): Promise<UpdateBirdNeedsSupportResponse> {
+  return apiHelper.patch<UpdateBirdNeedsSupportResponse>(`needs-support/birds/${birdId}`, data);
+}
+
+// Get birds that need support (with 2-round weekly cycle)
+export async function getBirdsNeedingSupport(): Promise<BirdsNeedsSupportResponse> {
+  return publicGet<BirdsNeedsSupportResponse>(`needs-support/birds`);
+}
+
+// Check if a bird can receive support in the current round
+export async function canSupportBird(birdId: string): Promise<CanSupportBirdResponse> {
+  return publicGet<CanSupportBirdResponse>(`needs-support/birds/${birdId}/can-support`);
 }
 
 export async function deleteBird(birdId: string): Promise<void> {

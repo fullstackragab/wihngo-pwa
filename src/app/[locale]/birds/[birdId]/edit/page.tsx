@@ -3,14 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getBird, updateBird, updateBirdSupportSettings, uploadBirdImage } from "@/services/bird.service";
+import { getBird, updateBird, updateBirdSupportSettings, updateBirdVisibility, updateBirdNeedsSupport, uploadBirdImage } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { LoadingScreen } from "@/components/ui/loading";
-import { ArrowLeft, Camera, Heart } from "lucide-react";
+import { ArrowLeft, Camera, Heart, Eye, EyeOff, HandHeart } from "lucide-react";
 import Image from "next/image";
 import { IMAGE_CONFIG } from "@/lib/config";
 
@@ -31,6 +31,8 @@ export default function EditBirdPage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [supportEnabled, setSupportEnabled] = useState(true);
+  const [isPublic, setIsPublic] = useState(true);
+  const [needsSupport, setNeedsSupport] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const { data: bird, isLoading } = useQuery({
@@ -64,6 +66,22 @@ export default function EditBirdPage() {
     },
   });
 
+  const visibilityMutation = useMutation({
+    mutationFn: (visible: boolean) => updateBirdVisibility(birdId, { isPublic: visible }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bird", birdId] });
+      queryClient.invalidateQueries({ queryKey: ["myBirds"] });
+    },
+  });
+
+  const needsSupportMutation = useMutation({
+    mutationFn: (needs: boolean) => updateBirdNeedsSupport(birdId, { needsSupport: needs }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bird", birdId] });
+      queryClient.invalidateQueries({ queryKey: ["birdsNeedingSupport"] });
+    },
+  });
+
   // Populate form when bird data loads
   useEffect(() => {
     if (bird) {
@@ -73,6 +91,8 @@ export default function EditBirdPage() {
       setLocation(bird.location || "");
       setAge(bird.age || "");
       setSupportEnabled(bird.supportEnabled !== false);
+      setIsPublic(bird.isPublic !== false); // Default to true if not set
+      setNeedsSupport(bird.needsSupport === true);
     }
   }, [bird]);
 
@@ -177,6 +197,16 @@ export default function EditBirdPage() {
   const handleSupportToggle = (enabled: boolean) => {
     setSupportEnabled(enabled);
     supportToggleMutation.mutate(enabled);
+  };
+
+  const handleVisibilityToggle = (visible: boolean) => {
+    setIsPublic(visible);
+    visibilityMutation.mutate(visible);
+  };
+
+  const handleNeedsSupportToggle = (needs: boolean) => {
+    setNeedsSupport(needs);
+    needsSupportMutation.mutate(needs);
   };
 
   const currentImage = imagePreview || bird.imageUrl;
@@ -292,6 +322,68 @@ export default function EditBirdPage() {
                   {description.length}/2000
                 </p>
               </div>
+            </div>
+          </Card>
+
+          {/* Needs Support - Request help from community */}
+          <Card variant="outlined" padding="md">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${needsSupport ? 'bg-amber-100' : 'bg-muted'}`}>
+                  <HandHeart className={`w-5 h-5 ${needsSupport ? 'text-amber-600' : 'text-muted-foreground'}`} />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Needs Support</p>
+                  <p className="text-sm text-muted-foreground">
+                    {needsSupport
+                      ? "Shown in 'Birds Need Support' - asking community for help"
+                      : "Not requesting community support right now"}
+                  </p>
+                  {bird?.timesSupportedThisWeek !== undefined && bird.timesSupportedThisWeek > 0 && (
+                    <p className="text-xs text-primary mt-1">
+                      Supported {bird.timesSupportedThisWeek}/2 times this week
+                    </p>
+                  )}
+                </div>
+              </div>
+              <Switch
+                checked={needsSupport}
+                onCheckedChange={handleNeedsSupportToggle}
+                disabled={needsSupportMutation.isPending || bird?.allRoundsComplete}
+              />
+            </div>
+            {bird?.allRoundsComplete && (
+              <p className="text-xs text-primary mt-3 bg-primary/10 px-3 py-2 rounded-lg">
+                This bird has received support in all rounds this week. Thank you community!
+              </p>
+            )}
+          </Card>
+
+          {/* Visibility Settings */}
+          <Card variant="outlined" padding="md">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  {isPublic ? (
+                    <Eye className="w-5 h-5 text-primary" />
+                  ) : (
+                    <EyeOff className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Public Profile</p>
+                  <p className="text-sm text-muted-foreground">
+                    {isPublic
+                      ? "Visible to everyone in bird listings"
+                      : "Hidden from public - only you can see this bird"}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={isPublic}
+                onCheckedChange={handleVisibilityToggle}
+                disabled={visibilityMutation.isPending}
+              />
             </div>
           </Card>
 

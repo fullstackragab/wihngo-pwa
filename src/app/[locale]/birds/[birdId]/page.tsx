@@ -10,12 +10,16 @@ import { useAuth } from "@/contexts/auth-context";
 import { StoryCard } from "@/components/story-card";
 import { KindWordsSection } from "@/components/kind-words";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
-import { ArrowLeft, Heart, MapPin, Flower2 } from "lucide-react";
+import { ArrowLeft, Heart, Flower2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
+
+// Default weekly goal is $1
+const WEEKLY_GOAL = 1;
 
 export default function BirdDetailPage() {
   const params = useParams();
@@ -76,171 +80,185 @@ export default function BirdDetailPage() {
   }
 
   const isOwner = user?.userId === bird.ownerId;
+  const currentFunding = bird.totalSupport || 0;
+  const progressPercentage = Math.min((currentFunding / WEEKLY_GOAL) * 100, 100);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header with Back Button */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.back()}
-            className="rounded-full"
+    <div className="min-h-screen bg-neutral-50">
+      {/* Header */}
+      <div className="bg-white border-b border-neutral-200 sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-4">
+          <button
+            onClick={() => router.push("/birds")}
+            className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+            <ArrowLeft className="w-5 h-5 text-neutral-700" />
+          </button>
+          <h1 className="text-xl font-semibold text-neutral-900">
+            Support {bird.name}
+          </h1>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 pb-8">
+      {/* Content */}
+      <div className="max-w-3xl mx-auto px-6 py-8">
         {/* Bird Image */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="relative rounded-3xl overflow-hidden shadow-lg mb-6"
+          className="aspect-[16/9] rounded-2xl overflow-hidden mb-6"
         >
           {bird.coverImageUrl || bird.imageUrl ? (
             <Image
               src={bird.coverImageUrl || bird.imageUrl || ""}
               alt={bird.name || "Bird"}
-              width={600}
-              height={480}
-              className="w-full h-80 object-cover"
+              width={800}
+              height={450}
+              className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-80 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+            <div className="w-full h-full bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center">
               <span className="text-6xl">🐦</span>
             </div>
           )}
-          {bird.isMemorial && (
-            <Link href={`/birds/${bird.birdId}/memorial`}>
-              <div className="absolute top-4 right-4 bg-foreground/70 text-card px-3 py-1 rounded-full text-sm hover:bg-foreground/80 transition-colors cursor-pointer">
-                {t("inMemory")}
-              </div>
-            </Link>
-          )}
         </motion.div>
 
-        {/* Bird Info */}
+        {/* Bird Info Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="space-y-6"
+          className="bg-white rounded-2xl p-6 mb-6 shadow-sm"
         >
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="mb-2">{bird.name}</h1>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="w-4 h-4" />
-                <span>{bird.location || t("safeHavenNeeded")}</span>
-              </div>
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-3xl font-bold text-neutral-900">{bird.name}</h2>
+            <div className="flex items-center gap-3">
+              <span className="text-lg text-neutral-600">{bird.species}</span>
+              <button
+                onClick={() => loveMutation.mutate()}
+                disabled={loveMutation.isPending}
+                className="p-2 hover:bg-neutral-100 rounded-full transition-colors"
+              >
+                <Heart
+                  className={`w-6 h-6 transition-colors ${
+                    bird.isLoved
+                      ? "text-red-500 fill-red-500"
+                      : "text-neutral-400"
+                  }`}
+                />
+              </button>
             </div>
-            <button
-              onClick={() => loveMutation.mutate()}
-              disabled={loveMutation.isPending}
-              className="p-2"
-            >
-              <Heart
-                className={`w-7 h-7 transition-colors ${
-                  bird.isLoved
-                    ? "text-primary fill-primary"
-                    : "text-muted-foreground"
-                }`}
-              />
-            </button>
           </div>
 
-          {/* Story */}
           {(bird.tagline || bird.description) && (
-            <div className="space-y-2">
-              <h3 className="text-foreground/90">{t("story")}</h3>
-              <p className="text-foreground/70 leading-relaxed">
-                {bird.description || bird.tagline}
-              </p>
-            </div>
-          )}
-
-          {/* Needs/Info */}
-          {bird.species && (
-            <div className="space-y-2">
-              <h3 className="text-foreground/90">{t("species")}</h3>
-              <p className="text-foreground/70">{bird.species}</p>
-            </div>
-          )}
-
-          {/* Support Button */}
-          {bird.canSupport !== false && !bird.isMemorial && (
-            <div className="pt-4">
-              <Link href={`/birds/${bird.birdId}/support`}>
-                <Button size="lg" className="w-full rounded-full gap-2">
-                  <Heart className="w-4 h-4" />
-                  {t("supportBird", { name: bird.name })}
-                </Button>
-              </Link>
-            </div>
-          )}
-
-          {/* Memorial Button */}
-          {bird.isMemorial && (
-            <div className="pt-4">
-              <Link href={`/birds/${bird.birdId}/memorial`}>
-                <Button size="lg" variant="outline" className="w-full rounded-full gap-2">
-                  <Flower2 className="w-4 h-4" />
-                  {t("viewTributes")}
-                </Button>
-              </Link>
-            </div>
-          )}
-
-          {bird.supportUnavailableMessage && !bird.isMemorial && (
-            <div className="bg-muted/50 rounded-2xl p-4 border border-border">
-              <p className="text-sm text-muted-foreground text-center">
-                {bird.supportUnavailableMessage}
-              </p>
-            </div>
-          )}
-
-          {/* Reassurance */}
-          {bird.canSupport !== false && !bird.isMemorial && (
-            <p className="text-center text-sm text-muted-foreground">
-              {t("support100Percent")}
+            <p className="text-neutral-700 leading-relaxed mb-6">
+              {bird.description || bird.tagline}
             </p>
           )}
 
-          {/* Kind Words Section */}
-          {kindWordsData?.isEnabled && (
-            <div className="pt-4">
-              <KindWordsSection
-                birdId={birdId}
-                birdName={bird.name}
-                initialData={kindWordsData}
-                currentUserId={user?.userId}
-                isOwner={isOwner}
-              />
+          {/* Weekly Progress */}
+          <div className="bg-neutral-50 rounded-xl p-4">
+            <div className="flex items-center justify-between text-sm mb-2">
+              <span className="text-neutral-600">{t("weeklyGoal")}</span>
+              <span className="font-semibold text-neutral-900">
+                ${currentFunding.toFixed(2)} / ${WEEKLY_GOAL}
+              </span>
+            </div>
+            <Progress value={progressPercentage} className="h-3" />
+          </div>
+        </motion.div>
+
+        {/* Support Section */}
+        {bird.canSupport !== false && !bird.isMemorial && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-2xl p-6 shadow-sm mb-6"
+          >
+            <Link href={`/birds/${bird.birdId}/support`}>
+              <Button
+                size="lg"
+                className="w-full bg-primary hover:bg-primary-hover text-white py-6 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all"
+              >
+                Support {bird.name}
+              </Button>
+            </Link>
+            <p className="text-center text-sm text-neutral-500 mt-4">
+              {t("support100Percent")}
+            </p>
+          </motion.div>
+        )}
+
+        {/* Memorial Button */}
+        {bird.isMemorial && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-2xl p-6 shadow-sm mb-6"
+          >
+            <Link href={`/birds/${bird.birdId}/memorial`}>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full py-6 text-lg rounded-xl gap-2"
+              >
+                <Flower2 className="w-5 h-5" />
+                {t("viewTributes")}
+              </Button>
+            </Link>
+          </motion.div>
+        )}
+
+        {bird.supportUnavailableMessage && !bird.isMemorial && (
+          <div className="bg-neutral-100 rounded-2xl p-4 mb-6">
+            <p className="text-sm text-neutral-600 text-center">
+              {bird.supportUnavailableMessage}
+            </p>
+          </div>
+        )}
+
+        {/* Kind Words Section */}
+        {kindWordsData?.isEnabled && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mb-6"
+          >
+            <KindWordsSection
+              birdId={birdId}
+              birdName={bird.name}
+              initialData={kindWordsData}
+              currentUserId={user?.userId}
+              isOwner={isOwner}
+            />
+          </motion.div>
+        )}
+
+        {/* Stories Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <h2 className="text-xl font-semibold text-neutral-900 mb-4">{t("stories")}</h2>
+          {storiesLoading ? (
+            <div className="flex justify-center py-8">
+              <LoadingSpinner />
+            </div>
+          ) : !storiesData?.items || storiesData.items.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-neutral-200 text-center py-8">
+              <p className="text-neutral-500">{t("noStoriesYet")}</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {storiesData.items.map((story) => (
+                <StoryCard key={story.storyId} story={story} />
+              ))}
             </div>
           )}
-
-          {/* Stories Section */}
-          <div className="pt-4">
-            <h2 className="font-medium text-foreground mb-4">{t("stories")}</h2>
-            {storiesLoading ? (
-              <div className="flex justify-center py-8">
-                <LoadingSpinner />
-              </div>
-            ) : !storiesData?.items || storiesData.items.length === 0 ? (
-              <div className="bg-card rounded-2xl border border-border/50 text-center py-8">
-                <p className="text-muted-foreground">{t("noStoriesYet")}</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {storiesData.items.map((story) => (
-                  <StoryCard key={story.storyId} story={story} />
-                ))}
-              </div>
-            )}
-          </div>
         </motion.div>
       </div>
     </div>

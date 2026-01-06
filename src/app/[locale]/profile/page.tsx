@@ -27,6 +27,7 @@ import {
   Users,
   Globe,
   Flower2,
+  CalendarClock,
 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import Link from "next/link";
@@ -238,6 +239,18 @@ export default function ProfilePage() {
                 <h4 className="mb-1">{t("walletSupport")}</h4>
                 <p className="text-sm text-muted-foreground">
                   {t("walletSupportDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/profile/weekly-support">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <CalendarClock className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{t("weeklySupport")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {t("weeklySupportDesc")}
                 </p>
               </div>
             </div>

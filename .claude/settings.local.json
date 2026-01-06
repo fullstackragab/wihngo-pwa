@@ -19,7 +19,9 @@
       "Bash(timeout 15 npm run dev:*)",
       "Bash(taskkill:*)",
       "Bash(npx image-size:*)",
-      "Bash(file:*)"
+      "Bash(file:*)",
+      "Bash(dir:*)",
+      "Bash(dir \"C:\\\\_companies\\\\wihngo\\\\*.zip\")"
     ]
   }
 }
