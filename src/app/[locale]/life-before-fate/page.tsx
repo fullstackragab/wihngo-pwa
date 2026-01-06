@@ -5,6 +5,7 @@ import { TopBar } from "@/components/top-bar";
 import { Card } from "@/components/ui/card";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 
 export default function LifeBeforeFatePage() {
   const router = useRouter();
@@ -13,7 +14,6 @@ export default function LifeBeforeFatePage() {
   const points = [
     { title: t("point1Title"), content: t("point1Content"), number: "1" },
     { title: t("point2Title"), content: t("point2Content"), number: "2" },
-    { title: t("point3Title"), content: t("point3Content"), number: "3" },
   ];
 
   return (
@@ -33,11 +33,40 @@ export default function LifeBeforeFatePage() {
           </Card>
         </motion.div>
 
+        {/* Images with Question */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card className="p-6 space-y-4">
+            <div className="relative aspect-video rounded-xl overflow-hidden">
+              <Image
+                src="/chicken.jpg"
+                alt="Chicken"
+                fill
+                className="object-cover"
+              />
+            </div>
+            <div className="relative aspect-video rounded-xl overflow-hidden">
+              <Image
+                src="/cock.jpg"
+                alt="Cock"
+                fill
+                className="object-cover"
+              />
+            </div>
+            <p className="text-foreground font-medium text-center text-lg">
+              {t("agreeToLive")}
+            </p>
+          </Card>
+        </motion.div>
+
         {/* How Title */}
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.2 }}
           className="text-xl font-medium text-foreground text-center pt-2"
         >
           {t("howTitle")}
@@ -49,7 +78,7 @@ export default function LifeBeforeFatePage() {
             key={index}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 + index * 0.1 }}
+            transition={{ delay: 0.25 + index * 0.1 }}
           >
             <Card className="p-6">
               <div className="flex items-start gap-3">
@@ -69,27 +98,11 @@ export default function LifeBeforeFatePage() {
           </motion.div>
         ))}
 
-        {/* Main Idea */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-        >
-          <Card className="p-6 bg-primary/5 border-primary/20">
-            <h3 className="text-primary font-medium mb-3">
-              {t("mainIdeaTitle")}
-            </h3>
-            <p className="text-foreground/80 leading-relaxed">
-              {t("mainIdeaContent")}
-            </p>
-          </Card>
-        </motion.div>
-
         {/* Conclusion */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
+          transition={{ delay: 0.5 }}
         >
           <Card className="p-6 bg-accent/30 border-accent">
             <p className="text-foreground/80 leading-relaxed whitespace-pre-line text-center">

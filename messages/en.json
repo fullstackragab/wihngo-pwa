@@ -505,16 +505,13 @@
   },
   "lifeBeforeFate": {
     "title": "How to Make Chickens' Lives Better",
-    "intro": "Many chickens live lives deprived of the simplest elements of nature, ending in slaughter.",
+    "intro": "The journey of pain and suffering for chickens. They spend their lives behind walls, in confinement, and the end is slaughter — this is what awaits them.",
+    "agreeToLive": "Do you agree to live like this?",
     "howTitle": "How can we make chickens' lives better?",
     "point1Title": "Improve living conditions",
-    "point1Content": "Move away from battery cages\nProvide space for movement, sunlight, and fresh air\nAllow them to behave naturally:\nForaging, scratching, spreading their wings",
-    "point2Title": "Free-range or pasture-raised",
-    "point2Content": "Free-range or Pasture-raised farming\nEven if slaughter comes at the end, the moral difference between a natural life and a life of suffering is significant",
-    "point3Title": "Support alternatives",
-    "point3Content": "Humane farms\nAnimal welfare initiatives",
-    "mainIdeaTitle": "The Main Idea",
-    "mainIdeaContent": "We are not only responsible for the ending, but for the life that precedes it.",
+    "point1Content": "Provide space for movement, sunlight, and fresh air\nAllow them to behave naturally:\nForaging, scratching, spreading their wings",
+    "point2Title": "Support alternatives",
+    "point2Content": "Free-range or Pasture-raised farming\nHumane farms\nAnimal welfare initiatives",
     "conclusion": "Even if slaughter is part of reality,\ncompassion before the end is what defines our humanity."
   },
   "errors": {
