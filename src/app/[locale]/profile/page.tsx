@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { usePhantom } from "@/hooks/use-phantom";
 import { linkWallet, unlinkWallet } from "@/services/wallet.service";
+import { isMobileDevice } from "@/lib/phantom/platform";
 import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
@@ -41,7 +42,13 @@ export default function ProfilePage() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const t = useTranslations("profile");
+
+  // Detect mobile device on mount
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
   const tCommon = useTranslations("common");
 
   const handleConnectWallet = async () => {
@@ -140,83 +147,85 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Wallet Status */}
-          <div className="pt-4 border-t border-border/50">
-            {isConnected ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Wallet className="w-5 h-5 text-primary" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium">{t("walletConnected")}</span>
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                    </div>
-                    <p className="text-xs text-muted-foreground font-mono break-all">
-                      {walletAddress}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  onClick={handleDisconnectWallet}
-                  variant="outline"
-                  size="sm"
-                  className="w-full rounded-full"
-                  disabled={isDisconnecting}
-                >
-                  {isDisconnecting ? (
-                    <>
-                      <LoadingSpinner className="w-4 h-4 me-2" />
-                      {tCommon("loading")}
-                    </>
-                  ) : (
-                    t("disconnectWallet")
-                  )}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
+          {/* Wallet Status - Desktop only */}
+          {!isMobile && (
+            <div className="pt-4 border-t border-border/50">
+              {isConnected ? (
+                <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <Wallet className="w-5 h-5 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {t("noWalletConnected")}
-                    </span>
+                    <Wallet className="w-5 h-5 text-primary" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-medium">{t("walletConnected")}</span>
+                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                      </div>
+                      <p className="text-xs text-muted-foreground font-mono break-all">
+                        {walletAddress}
+                      </p>
+                    </div>
                   </div>
                   <Button
-                    onClick={handleConnectWallet}
+                    onClick={handleDisconnectWallet}
                     variant="outline"
                     size="sm"
-                    className="rounded-full"
-                    disabled={isConnecting}
+                    className="w-full rounded-full"
+                    disabled={isDisconnecting}
                   >
-                    {isConnecting ? (
+                    {isDisconnecting ? (
                       <>
                         <LoadingSpinner className="w-4 h-4 me-2" />
                         {tCommon("loading")}
                       </>
                     ) : (
-                      t("connect")
+                      t("disconnectWallet")
                     )}
                   </Button>
                 </div>
-                {!isPhantomInstalled && (
-                  <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 p-2 rounded-lg">
-                    <a
-                      href="https://phantom.app/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-purple-600 font-medium hover:underline"
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <Wallet className="w-5 h-5 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {t("noWalletConnected")}
+                      </span>
+                    </div>
+                    <Button
+                      onClick={handleConnectWallet}
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      disabled={isConnecting}
                     >
-                      {t("getPhantom")} <ExternalLink className="w-3 h-3" />
-                    </a>
+                      {isConnecting ? (
+                        <>
+                          <LoadingSpinner className="w-4 h-4 me-2" />
+                          {tCommon("loading")}
+                        </>
+                      ) : (
+                        t("connect")
+                      )}
+                    </Button>
                   </div>
-                )}
-                {connectError && (
-                  <p className="text-xs text-destructive">{connectError}</p>
-                )}
-              </div>
-            )}
-          </div>
+                  {!isPhantomInstalled && (
+                    <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 p-2 rounded-lg">
+                      <a
+                        href="https://phantom.app/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-purple-600 font-medium hover:underline"
+                      >
+                        {t("getPhantom")} <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
+                  {connectError && (
+                    <p className="text-xs text-destructive">{connectError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </motion.div>
 
         {/* Quick Links */}
@@ -262,17 +271,20 @@ export default function ProfilePage() {
             </div>
           </Link>
 
-          <Link href="/profile/wallet">
-            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
-              <Wallet className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="mb-1">{t("walletSupport")}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t("walletSupportDesc")}
-                </p>
+          {/* Wallet Support - Desktop only */}
+          {!isMobile && (
+            <Link href="/profile/wallet">
+              <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+                <Wallet className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="mb-1">{t("walletSupport")}</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {t("walletSupportDesc")}
+                  </p>
+                </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+          )}
 
           <Link href="/profile/weekly-support">
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
