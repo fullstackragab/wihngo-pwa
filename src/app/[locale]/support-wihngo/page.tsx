@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BottomNav } from "@/components/bottom-nav";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { motion } from "motion/react";
 import { isMobileDevice } from "@/lib/phantom/platform";
 
@@ -30,24 +30,7 @@ export default function SupportWihngoPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push("/")}
-              className="rounded-full"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h2>Support Wihngo</h2>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-md mx-auto px-4 py-12 space-y-8">
+      <div className="max-w-md mx-auto px-4 py-8 space-y-8">
         {/* Icon */}
         <motion.div
           initial={{ scale: 0 }}

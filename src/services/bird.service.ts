@@ -39,7 +39,7 @@ export async function updateBirdNeedsSupport(birdId: string, data: UpdateBirdNee
   return apiHelper.patch<UpdateBirdNeedsSupportResponse>(`needs-support/birds/${birdId}`, data);
 }
 
-// Get birds that need support (with 2-round weekly cycle)
+// Get birds that need support (once per week)
 export async function getBirdsNeedingSupport(): Promise<BirdsNeedsSupportResponse> {
   return publicGet<BirdsNeedsSupportResponse>(`needs-support/birds`);
 }
@@ -120,12 +120,18 @@ export async function postMemorialMessage(birdId: string, data: CreateMemorialMe
   return apiHelper.post<MemorialMessage>(`birds/${birdId}/memorial/messages`, data);
 }
 
-// Image upload - must be done after bird is created
+// Image upload response
 export interface BirdImageUploadResponse {
   s3Key: string;
   url: string;
 }
 
+// Pre-upload image before creating bird (returns S3 key to include in create request)
+export async function preUploadBirdImage(file: File): Promise<BirdImageUploadResponse> {
+  return uploadFile<BirdImageUploadResponse>("birds/upload-image", file, "file");
+}
+
+// Upload/update image for existing bird
 export async function uploadBirdImage(birdId: string, file: File): Promise<BirdImageUploadResponse> {
   return uploadFile<BirdImageUploadResponse>(`birds/${birdId}/image`, file, "file");
 }

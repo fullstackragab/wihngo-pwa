@@ -35,10 +35,10 @@ export default function EditBirdPage() {
   const [needsSupport, setNeedsSupport] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: bird, isLoading } = useQuery({
+  const { data: bird, isLoading, isFetching } = useQuery({
     queryKey: ["bird", birdId],
     queryFn: () => getBird(birdId),
-    enabled: !!birdId && isAuthenticated,
+    enabled: !!birdId && !authLoading && isAuthenticated,
   });
 
   const updateMutation = useMutation({
@@ -85,9 +85,10 @@ export default function EditBirdPage() {
   // Populate form when bird data loads
   useEffect(() => {
     if (bird) {
-      setName(bird.name || "");
-      setSpecies(bird.species || "");
-      setDescription(bird.description || "");
+      // API returns commonName/scientificName, map to name/species
+      setName(bird.name || bird.commonName || "");
+      setSpecies(bird.species || bird.scientificName || "");
+      setDescription(bird.description || bird.tagline || "");
       setLocation(bird.location || "");
       setAge(bird.age || "");
       setSupportEnabled(bird.supportEnabled !== false);
@@ -116,7 +117,7 @@ export default function EditBirdPage() {
     return null;
   }
 
-  if (isLoading) {
+  if (isLoading || isFetching) {
     return <LoadingScreen />;
   }
 
@@ -209,7 +210,9 @@ export default function EditBirdPage() {
     needsSupportMutation.mutate(needs);
   };
 
-  const currentImage = imagePreview || bird.imageUrl;
+  // Only use imageUrl if it's a valid URL (not just S3 key)
+  const birdImageUrl = bird.imageUrl?.startsWith('http') ? bird.imageUrl : null;
+  const currentImage = imagePreview || birdImageUrl;
 
   return (
     <div className="min-h-screen-safe bg-background">

@@ -80,11 +80,9 @@ export type CreateBirdDto = {
   videoS3Key?: string;
   age?: string;
   location?: string;
-  walletAddress: string; // Required: Solana wallet to receive support
 };
 
-export type UpdateBirdDto = Partial<Omit<CreateBirdDto, 'walletAddress'>> & {
-  walletAddress?: string; // Optional on update
+export type UpdateBirdDto = Partial<CreateBirdDto> & {
   supportEnabled?: boolean; // Toggle to accept/reject support
   isPublic?: boolean; // Toggle visibility (draft mode)
 };
@@ -124,17 +122,15 @@ export type BirdNeedsSupportDto = {
   totalSupportCount: number;
 };
 
-// Birds needing support response with round info (2-round system)
+// Birds needing support response (once per week)
 export type BirdsNeedsSupportResponse = {
-  currentRound: number | null; // 1 or 2, null if all complete
-  totalRounds: number; // Always 2
-  allRoundsComplete: boolean;
+  allComplete: boolean;
   thankYouMessage: string | null;
   howItWorks: string;
   birds: BirdNeedsSupportDto[];
   totalBirdsParticipating: number;
-  birdsSupportedThisRound: number;
-  birdsRemainingThisRound: number;
+  birdsSupportedThisWeek: number;
+  birdsRemainingThisWeek: number;
   weekStartDate: string;
   weekEndDate: string;
 };

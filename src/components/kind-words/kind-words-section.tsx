@@ -108,9 +108,9 @@ export function KindWordsSection({
         {/* Kind words list */}
         {items.length > 0 ? (
           <div className="divide-y divide-border">
-            {items.map((kindWord) => (
+            {items.map((kindWord, index) => (
               <KindWordItem
-                key={kindWord.id}
+                key={kindWord.id || `kind-word-${index}`}
                 kindWord={kindWord}
                 canDelete={canDeleteKindWord(kindWord)}
                 isOwner={isOwner}

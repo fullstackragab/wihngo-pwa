@@ -3,16 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createBird, uploadBirdImage } from "@/services/bird.service";
+import { createBird, preUploadBirdImage } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
-import { usePhantom } from "@/hooks/use-phantom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
 import {
   ArrowLeft,
   Camera,
-  Wallet,
   MapPin,
   Bird,
   X,
@@ -27,7 +25,6 @@ export default function CreateBirdPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { walletAddress, isConnected } = usePhantom();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const t = useTranslations("createBird");
   const tErrors = useTranslations("errors");
@@ -38,18 +35,10 @@ export default function CreateBirdPage() {
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [age, setAge] = useState("");
-  const [wallet, setWallet] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageS3Key, setImageS3Key] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
-
-  // Auto-fill wallet address from connected wallet
-  useEffect(() => {
-    if (isConnected && walletAddress && !wallet) {
-      setWallet(walletAddress);
-    }
-  }, [isConnected, walletAddress, wallet]);
 
   // Auth check
   useEffect(() => {
@@ -65,7 +54,7 @@ export default function CreateBirdPage() {
     },
   });
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       // Validate file type
@@ -78,18 +67,33 @@ export default function CreateBirdPage() {
         setError(tErrors("imageTooLarge"));
         return;
       }
-      setImageFile(file);
+
+      // Show preview immediately
       setImagePreview(URL.createObjectURL(file));
       setError("");
+
+      // Upload image immediately
+      setIsUploading(true);
+      try {
+        const uploadResult = await preUploadBirdImage(file);
+        setImageS3Key(uploadResult.s3Key);
+      } catch (uploadErr) {
+        console.error("Image upload failed:", uploadErr);
+        setError(tErrors("uploadFailed"));
+        setImagePreview(null);
+        setImageS3Key(null);
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
   const handleRemoveImage = () => {
-    setImageFile(null);
     if (imagePreview) {
       URL.revokeObjectURL(imagePreview);
       setImagePreview(null);
     }
+    setImageS3Key(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -108,36 +112,19 @@ export default function CreateBirdPage() {
       setError(tErrors("enterSpecies"));
       return;
     }
-    if (!wallet.trim()) {
-      setError(tErrors("enterWallet"));
-      return;
-    }
 
     try {
-      // Step 1: Create bird first (without image)
+      // Create bird with already-uploaded image S3 key
       const bird = await createBirdMutation.mutateAsync({
         name: name.trim(),
         species: species.trim(),
         description: description.trim() || undefined,
         location: location.trim() || undefined,
         age: age.trim() || undefined,
-        walletAddress: wallet.trim(),
+        imageS3Key: imageS3Key || undefined,
       });
 
-      // Step 2: Upload image if selected (using bird ID)
-      if (imageFile && bird.birdId) {
-        setIsUploading(true);
-        try {
-          await uploadBirdImage(bird.birdId, imageFile);
-        } catch (uploadErr) {
-          console.error("Image upload failed:", uploadErr);
-          // Don't block navigation - bird was created successfully
-          // Image can be added later from edit page
-        }
-        setIsUploading(false);
-      }
-
-      // Step 3: Invalidate queries and navigate
+      // Invalidate queries and navigate
       queryClient.invalidateQueries({ queryKey: ["myBirds"] });
       queryClient.invalidateQueries({ queryKey: ["birds"] });
       queryClient.invalidateQueries({ queryKey: ["bird", bird.birdId] });
@@ -148,7 +135,7 @@ export default function CreateBirdPage() {
   };
 
   const isSubmitting = isUploading || createBirdMutation.isPending;
-  const canSubmit = name.trim() && species.trim() && wallet.trim() && !isSubmitting;
+  const canSubmit = name.trim() && species.trim() && !isSubmitting;
 
   if (authLoading) {
     return <LoadingScreen />;
@@ -202,9 +189,6 @@ export default function CreateBirdPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
         >
-          <label className="block text-sm font-medium text-foreground mb-2">
-            {t("photo")}
-          </label>
           <input
             ref={fileInputRef}
             type="file"
@@ -218,12 +202,28 @@ export default function CreateBirdPage() {
                 src={imagePreview}
                 alt="Bird preview"
                 fill
-                className="object-cover"
+                className={`object-cover ${isUploading ? "opacity-50" : ""}`}
               />
+              {/* Upload status overlay */}
+              {isUploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+                  <div className="flex flex-col items-center gap-2">
+                    <LoadingSpinner className="w-8 h-8" />
+                    <span className="text-sm font-medium">{t("uploading")}</span>
+                  </div>
+                </div>
+              )}
+              {/* Upload complete indicator */}
+              {!isUploading && imageS3Key && (
+                <div className="absolute bottom-2 left-2 bg-green-500 text-white rounded-full p-1.5">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleRemoveImage}
-                className="absolute top-2 right-2 w-8 h-8 bg-foreground/80 rounded-full flex items-center justify-center text-background hover:bg-foreground transition-colors"
+                disabled={isUploading}
+                className="absolute top-2 right-2 w-8 h-8 bg-foreground/80 rounded-full flex items-center justify-center text-background hover:bg-foreground transition-colors disabled:opacity-50"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -330,41 +330,6 @@ export default function CreateBirdPage() {
               {description.length}/1000
             </p>
           </div>
-        </motion.div>
-
-        {/* Wallet Address */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="bg-card rounded-2xl border border-border/50 p-4 space-y-3"
-        >
-          <div className="flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-primary" />
-            <label htmlFor="wallet" className="text-sm font-medium text-foreground">
-              {t("supportWallet")} <span className="text-destructive">*</span>
-            </label>
-          </div>
-          <Input
-            id="wallet"
-            type="text"
-            value={wallet}
-            onChange={(e) => setWallet(e.target.value)}
-            placeholder={t("walletPlaceholder")}
-            className="font-mono text-sm"
-          />
-          <p className="text-xs text-muted-foreground">
-            {t("walletHint")}
-          </p>
-          {isConnected && walletAddress && wallet !== walletAddress && (
-            <button
-              type="button"
-              onClick={() => setWallet(walletAddress)}
-              className="text-xs text-primary hover:underline"
-            >
-              {t("useConnectedWallet")} ({walletAddress.slice(0, 8)}...)
-            </button>
-          )}
         </motion.div>
 
         {/* Error Message */}

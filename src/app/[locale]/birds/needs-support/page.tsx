@@ -70,9 +70,6 @@ function BirdNeedsSupportCard({ bird }: { bird: BirdNeedsSupportDto }) {
             <span className="text-muted-foreground">
               {t("owner")}: {bird.ownerName}
             </span>
-            <span className="text-primary font-medium">
-              {t("supportedCount", { count: bird.timesSupportedThisWeek })}/2
-            </span>
           </div>
 
           {/* Support Button */}
@@ -110,13 +107,11 @@ export default function BirdsNeedSupportPage() {
   }
 
   const birds = data?.birds || [];
-  const currentRound = data?.currentRound;
-  const totalRounds = data?.totalRounds || 2;
-  const allRoundsComplete = data?.allRoundsComplete || false;
+  const allComplete = data?.allComplete || false;
   const thankYouMessage = data?.thankYouMessage;
   const howItWorks = data?.howItWorks;
-  const birdsSupportedThisRound = data?.birdsSupportedThisRound || 0;
-  const birdsRemainingThisRound = data?.birdsRemainingThisRound || 0;
+  const birdsSupportedThisWeek = data?.birdsSupportedThisWeek || 0;
+  const birdsRemainingThisWeek = data?.birdsRemainingThisWeek || 0;
   const totalBirdsParticipating = data?.totalBirdsParticipating || 0;
   const weekStartDate = data?.weekStartDate;
   const weekEndDate = data?.weekEndDate;
@@ -134,7 +129,7 @@ export default function BirdsNeedSupportPage() {
 
   // Progress percentage
   const progressPercent = totalBirdsParticipating > 0
-    ? (birdsSupportedThisRound / totalBirdsParticipating) * 100
+    ? (birdsSupportedThisWeek / totalBirdsParticipating) * 100
     : 0;
 
   return (
@@ -153,11 +148,6 @@ export default function BirdsNeedSupportPage() {
             </Button>
             <div className="flex-1">
               <h2 className="text-lg font-semibold">{t("title")}</h2>
-              {!allRoundsComplete && currentRound && (
-                <p className="text-xs text-muted-foreground">
-                  {t("roundIndicator", { current: currentRound, total: totalRounds })}
-                </p>
-              )}
             </div>
             <button
               onClick={() => setShowHowItWorks(!showHowItWorks)}
@@ -203,8 +193,8 @@ export default function BirdsNeedSupportPage() {
           )}
         </AnimatePresence>
 
-        {/* Round Progress Banner */}
-        {!allRoundsComplete && birds.length > 0 && (
+        {/* Weekly Progress Banner */}
+        {!allComplete && birds.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -220,12 +210,10 @@ export default function BirdsNeedSupportPage() {
 
             <div className="flex items-center justify-between mb-3">
               <p className="font-medium text-neutral-900">
-                {currentRound === 2
-                  ? t("round2Title")
-                  : t("round1Title")}
+                {t("weeklyProgress")}
               </p>
               <span className="text-sm text-muted-foreground">
-                {birdsRemainingThisRound} {birdsRemainingThisRound === 1 ? t("birdRemaining") : t("birdsRemaining")}
+                {birdsRemainingThisWeek} {birdsRemainingThisWeek === 1 ? t("birdRemaining") : t("birdsRemaining")}
               </span>
             </div>
 
@@ -239,13 +227,13 @@ export default function BirdsNeedSupportPage() {
               />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {birdsSupportedThisRound}/{totalBirdsParticipating} {t("birdsSupportedThisRound")}
+              {birdsSupportedThisWeek}/{totalBirdsParticipating} {t("birdsSupportedThisWeek")}
             </p>
           </motion.div>
         )}
 
-        {/* All Rounds Complete - Thank You Message */}
-        {allRoundsComplete && (
+        {/* All Complete - Thank You Message */}
+        {allComplete && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -263,10 +251,10 @@ export default function BirdsNeedSupportPage() {
             ) : (
               <>
                 <h2 className="text-2xl font-bold text-neutral-900 mb-3">
-                  {t("allRoundsCompleteTitle")}
+                  {t("allCompleteTitle")}
                 </h2>
                 <p className="text-neutral-600 max-w-sm mx-auto mb-6 leading-relaxed">
-                  {t("allRoundsCompleteDesc")}
+                  {t("allCompleteDesc")}
                 </p>
               </>
             )}
@@ -288,7 +276,7 @@ export default function BirdsNeedSupportPage() {
         )}
 
         {/* Birds Grid */}
-        {!allRoundsComplete && birds.length > 0 && (
+        {!allComplete && birds.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -309,7 +297,7 @@ export default function BirdsNeedSupportPage() {
         )}
 
         {/* No Birds Need Support */}
-        {!allRoundsComplete && birds.length === 0 && (
+        {!allComplete && birds.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -343,7 +331,7 @@ export default function BirdsNeedSupportPage() {
         )}
 
         {/* Bottom How It Works Link */}
-        {!showHowItWorks && !allRoundsComplete && birds.length > 0 && (
+        {!showHowItWorks && !allComplete && birds.length > 0 && (
           <button
             onClick={() => setShowHowItWorks(true)}
             className="flex items-center gap-2 text-sm text-muted-foreground mx-auto py-4"

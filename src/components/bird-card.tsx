@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { Bird } from "@/types/bird";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 
@@ -14,18 +13,9 @@ interface BirdCardProps {
   variant?: "default" | "compact" | "feed";
 }
 
-// Default weekly goal is $1
-const WEEKLY_GOAL = 1;
-
 export function BirdCard({ bird, onSupport, variant = "default" }: BirdCardProps) {
   const t = useTranslations("birds");
   const router = useRouter();
-
-  // Calculate funding progress (using totalSupport or default to 0)
-  const currentFunding = bird.totalSupport || 0;
-  const weeklyGoal = WEEKLY_GOAL;
-  const progressPercentage = Math.min((currentFunding / weeklyGoal) * 100, 100);
-  const isFunded = currentFunding >= weeklyGoal;
 
   // Compact variant for inline lists
   if (variant === "compact") {
@@ -53,7 +43,7 @@ export function BirdCard({ bird, onSupport, variant = "default" }: BirdCardProps
     );
   }
 
-  // Feed variant - matches Figma BirdCard design with progress bar
+  // Feed variant - card design for bird listings
   if (variant === "feed") {
     return (
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-200 hover:shadow-md transition-shadow">
@@ -76,23 +66,14 @@ export function BirdCard({ bird, onSupport, variant = "default" }: BirdCardProps
         </Link>
         <div className="p-5">
           {/* Name + Type */}
-          <div className="flex items-baseline justify-between mb-2">
+          <div className="flex items-baseline justify-between mb-4">
             <Link href={`/birds/${bird.birdId}`}>
               <h3 className="text-xl font-semibold text-neutral-900">{bird.name}</h3>
             </Link>
             <span className="text-sm text-neutral-600">{bird.species}</span>
           </div>
 
-          {/* Weekly Progress */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-neutral-600">{t("weeklyGoal")}</span>
-              <span className="font-medium text-neutral-900">${weeklyGoal}</span>
-            </div>
-            <Progress value={progressPercentage} className="h-2" />
-          </div>
-
-          {/* Action Button or Funded Badge */}
+          {/* Action Button */}
           {bird.isMemorial ? (
             <Button
               onClick={() => router.push(`/birds/${bird.birdId}/memorial`)}
@@ -101,10 +82,6 @@ export function BirdCard({ bird, onSupport, variant = "default" }: BirdCardProps
             >
               {t("inMemory")}
             </Button>
-          ) : isFunded ? (
-            <div className="flex items-center gap-2 text-sm text-primary bg-green-50 px-4 py-3 rounded-lg">
-              <span>✓ {t("fundedThisWeek")}</span>
-            </div>
           ) : bird.canSupport !== false ? (
             <Button
               onClick={() => {
@@ -116,7 +93,7 @@ export function BirdCard({ bird, onSupport, variant = "default" }: BirdCardProps
               }}
               className="w-full bg-primary hover:bg-primary-hover text-white rounded-xl py-6"
             >
-              {t("supportFor1")}
+              {t("support")}
             </Button>
           ) : (
             <p className="text-sm text-neutral-500 text-center py-3">

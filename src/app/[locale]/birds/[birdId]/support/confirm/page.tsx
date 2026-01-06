@@ -290,8 +290,12 @@ function SupportConfirmContent() {
       linkWallet(walletAddress)
         .then(() => checkBalanceAndProceed())
         .catch((err) => {
-          console.warn("Wallet link failed, proceeding anyway:", err);
-          checkBalanceAndProceed();
+          console.error("Wallet link failed:", err);
+          // Extract error message from API response
+          const apiError = err as { data?: { error?: string }; message?: string };
+          const errorMsg = apiError.data?.error || apiError.message || "Failed to link wallet";
+          setError(errorMsg);
+          setStep("connect_wallet");
         });
     }
   }, [isConnected, walletAddress, step]);
@@ -310,8 +314,12 @@ function SupportConfirmContent() {
       linkWallet(walletAddress)
         .then(() => checkBalanceAndProceed())
         .catch((err) => {
-          console.warn("Wallet link failed, proceeding anyway:", err);
-          checkBalanceAndProceed();
+          console.error("Wallet link failed:", err);
+          // Extract error message from API response
+          const apiError = err as { data?: { error?: string }; message?: string };
+          const errorMsg = apiError.data?.error || apiError.message || "Failed to link wallet";
+          setError(errorMsg);
+          // Stay on connect_wallet step to show error
         });
     }
   }, [authLoading, isAuthenticated, isConnected, walletAddress, step, totalAmount]);
@@ -401,9 +409,18 @@ function SupportConfirmContent() {
       const publicKey = await connect();
       if (publicKey) {
         // Link wallet to user account in backend
-        await linkWallet(publicKey.toBase58());
-        // Clear stored params on successful connection (desktop)
-        clearSupportParams();
+        try {
+          await linkWallet(publicKey.toBase58());
+          // Clear stored params on successful connection (desktop)
+          clearSupportParams();
+        } catch (linkErr) {
+          console.error("Wallet link failed:", linkErr);
+          // Extract error message from API response
+          const apiError = linkErr as { data?: { error?: string }; message?: string };
+          const errorMsg = apiError.data?.error || apiError.message || "Failed to link wallet";
+          setError(errorMsg);
+          return; // Stop the flow
+        }
       } else if (isMobile) {
         // On mobile, connect() returns null because it redirects to Phantom app
         // Set waiting state - the page will reload when user returns
@@ -642,6 +659,33 @@ function SupportConfirmContent() {
   const renderContent = () => {
     switch (step) {
       case "connect_wallet":
+        // If there's an error (like wallet already linked), show only the error
+        if (error) {
+          return (
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <XCircle className="w-10 h-10 text-destructive" />
+                </div>
+                <h2 className="text-xl font-bold text-foreground mb-2">
+                  Unable to Connect Wallet
+                </h2>
+                <p className="text-destructive">{error}</p>
+              </div>
+
+              <div className="space-y-3">
+                <Button
+                  fullWidth
+                  variant="outline"
+                  onClick={() => router.back()}
+                >
+                  Go Back
+                </Button>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="space-y-6">
             <div className="text-center">
@@ -688,10 +732,6 @@ function SupportConfirmContent() {
               <Wallet className="w-5 h-5 mr-2" />
               Connect Phantom Wallet
             </Button>
-
-            {error && (
-              <p className="text-sm text-destructive text-center">{error}</p>
-            )}
           </div>
         );
 

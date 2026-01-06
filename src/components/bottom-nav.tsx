@@ -20,12 +20,19 @@ export function BottomNav() {
   const t = useTranslations("navigation");
 
   const getActiveTab = () => {
-    if (pathname === "/") return "home";
-    // Check for support pages first (birds/.../support)
-    if (pathname.includes("/support")) return "support";
-    if (pathname.startsWith("/birds")) return "explore";
-    if (pathname.startsWith("/support-wihngo")) return "support";
-    if (pathname.startsWith("/profile")) return "profile";
+    // Remove locale prefix from pathname for matching (e.g., /en/birds -> /birds)
+    const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}/, "") || "/";
+
+    // Check for bird support pages first (e.g., /birds/123/support)
+    if (
+      pathWithoutLocale.includes("/birds/") &&
+      pathWithoutLocale.includes("/support")
+    ) {
+      return "support";
+    }
+    if (pathWithoutLocale.startsWith("/birds")) return "explore";
+    if (pathWithoutLocale.startsWith("/support-wihngo")) return "support";
+    if (pathWithoutLocale.startsWith("/profile")) return "profile";
     return "home";
   };
 

@@ -27,6 +27,20 @@ export const IMAGE_CONFIG = {
   compressionQuality: 0.8,
 };
 
+export const S3_CONFIG = {
+  publicBucketUrl: process.env.NEXT_PUBLIC_S3_BUCKET_URL || "https://amzn-s3-wihngo-public-assets.s3.us-west-2.amazonaws.com",
+};
+
+/**
+ * Get full image URL from either a full URL or S3 key
+ */
+export function getImageUrl(urlOrKey: string | undefined | null): string | null {
+  if (!urlOrKey) return null;
+  if (urlOrKey.startsWith("http")) return urlOrKey;
+  // It's an S3 key, construct full URL
+  return `${S3_CONFIG.publicBucketUrl}/${urlOrKey}`;
+}
+
 export const VALIDATION = {
   minPasswordLength: 8,
   maxPasswordLength: 128,

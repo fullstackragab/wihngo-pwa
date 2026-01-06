@@ -6,6 +6,7 @@
 
 export type KindWord = {
   id: string;
+  kindWordId?: string; // Backend may return this instead of id
   birdId: string;
   authorUserId: string;
   authorName: string;

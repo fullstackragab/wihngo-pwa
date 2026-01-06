@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { usePhantom } from "@/hooks/use-phantom";
-import { linkWallet } from "@/services/wallet.service";
+import { linkWallet, unlinkWallet } from "@/services/wallet.service";
 import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
@@ -13,7 +13,6 @@ import {
   Wallet,
   Heart,
   Bird as BirdIcon,
-  ArrowLeft,
   LogOut,
   Info,
   BookOpen,
@@ -37,9 +36,10 @@ import { useTranslations } from "next-intl";
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
-  const { isConnected, walletAddress, connect, isPhantomInstalled } = usePhantom();
+  const { isConnected, walletAddress, connect, disconnect, isPhantomInstalled } = usePhantom();
   const router = useRouter();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const t = useTranslations("profile");
   const tCommon = useTranslations("common");
@@ -53,11 +53,40 @@ export default function ProfilePage() {
         // Link wallet to user account in backend
         await linkWallet(publicKey.toBase58());
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Wallet connection error:", err);
-      setConnectError(err instanceof Error ? err.message : "Failed to connect wallet");
+      // Extract error message from API response or use fallback
+      let errorMessage = "Failed to connect wallet";
+      if (err && typeof err === "object") {
+        const apiError = err as { data?: { error?: string }; message?: string };
+        if (apiError.data?.error) {
+          errorMessage = apiError.data.error;
+        } else if (apiError.message) {
+          errorMessage = apiError.message;
+        }
+      }
+      setConnectError(errorMessage);
     } finally {
       setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnectWallet = async () => {
+    setIsDisconnecting(true);
+    try {
+      // Disconnect from Phantom
+      await disconnect();
+      // Unlink from backend
+      try {
+        await unlinkWallet();
+      } catch (err) {
+        console.warn("Failed to unlink wallet from backend:", err);
+        // Continue anyway - wallet is disconnected locally
+      }
+    } catch (err) {
+      console.error("Wallet disconnect error:", err);
+    } finally {
+      setIsDisconnecting(false);
     }
   };
 
@@ -82,23 +111,6 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push("/")}
-              className="rounded-full"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h2>{t("title")}</h2>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         {/* User Info */}
         <motion.div
@@ -131,17 +143,35 @@ export default function ProfilePage() {
           {/* Wallet Status */}
           <div className="pt-4 border-t border-border/50">
             {isConnected ? (
-              <div className="flex items-center gap-3">
-                <Wallet className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium">{t("walletConnected")}</span>
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Wallet className="w-5 h-5 text-primary" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium">{t("walletConnected")}</span>
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono break-all">
+                      {walletAddress}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground font-mono break-all">
-                    {walletAddress}
-                  </p>
                 </div>
+                <Button
+                  onClick={handleDisconnectWallet}
+                  variant="outline"
+                  size="sm"
+                  className="w-full rounded-full"
+                  disabled={isDisconnecting}
+                >
+                  {isDisconnecting ? (
+                    <>
+                      <LoadingSpinner className="w-4 h-4 me-2" />
+                      {tCommon("loading")}
+                    </>
+                  ) : (
+                    t("disconnectWallet")
+                  )}
+                </Button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -330,30 +360,6 @@ export default function ProfilePage() {
             </div>
           </Link>
 
-          <Link href="/chicken-happiness">
-            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
-              <BookOpen className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="mb-1">{t("chickenHappiness")}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t("chickenHappinessDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/life-before-fate">
-            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
-              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="mb-1">{t("lifeBeforeFate")}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t("lifeBeforeFateDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-
           <Link href="/our-principles">
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <Scale className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
@@ -385,6 +391,66 @@ export default function ProfilePage() {
                 <h4 className="mb-1">{t("openCall")}</h4>
                 <p className="text-sm text-muted-foreground">
                   {t("openCallDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+        </motion.div>
+
+        {/* Our Ethical Position Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+          className="space-y-3"
+        >
+          <h3 className="text-sm font-medium text-muted-foreground px-1">
+            {t("ethicalPosition")}
+          </h3>
+
+          <Link href="/chicken-happiness">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <BookOpen className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{t("chickenHappiness")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {t("chickenHappinessDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/life-before-fate">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{t("lifeBeforeFate")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {t("lifeBeforeFateDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/what-chicken-does">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{t("whatChickenDoes")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {t("whatChickenDoesDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/life-with-pain">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{t("lifeWithPain")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {t("lifeWithPainDesc")}
                 </p>
               </div>
             </div>

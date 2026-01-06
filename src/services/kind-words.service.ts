@@ -14,12 +14,24 @@ import {
   validateKindWordText,
 } from "@/types/kind-word";
 
+// Normalize kind word to ensure id field is populated
+function normalizeKindWord(item: KindWord & { kindWordId?: string }): KindWord {
+  return {
+    ...item,
+    id: item.id || item.kindWordId || '',
+  };
+}
+
 /**
  * Get kind words for a bird
  * Returns list of visible kind words, user's posting eligibility, and remaining posts today
  */
 export async function getKindWords(birdId: string): Promise<KindWordsListResponse> {
-  return apiHelper.get<KindWordsListResponse>(`birds/${birdId}/kind-words`);
+  const response = await apiHelper.get<KindWordsListResponse>(`birds/${birdId}/kind-words`);
+  return {
+    ...response,
+    items: response.items?.map(normalizeKindWord) || [],
+  };
 }
 
 /**
@@ -33,9 +45,10 @@ export async function postKindWord(data: CreateKindWordDto): Promise<KindWord> {
     throw new Error(validation.error);
   }
 
-  return apiHelper.post<KindWord>(`birds/${data.birdId}/kind-words`, {
+  const response = await apiHelper.post<KindWord>(`birds/${data.birdId}/kind-words`, {
     text: data.text.trim(),
   });
+  return normalizeKindWord(response);
 }
 
 /**

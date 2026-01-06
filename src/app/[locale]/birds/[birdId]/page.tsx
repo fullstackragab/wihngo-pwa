@@ -10,16 +10,12 @@ import { useAuth } from "@/contexts/auth-context";
 import { StoryCard } from "@/components/story-card";
 import { KindWordsSection } from "@/components/kind-words";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
 import { ArrowLeft, Heart, Flower2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
-
-// Default weekly goal is $1
-const WEEKLY_GOAL = 1;
 
 export default function BirdDetailPage() {
   const params = useParams();
@@ -80,8 +76,6 @@ export default function BirdDetailPage() {
   }
 
   const isOwner = user?.userId === bird.ownerId;
-  const currentFunding = bird.totalSupport || 0;
-  const progressPercentage = Math.min((currentFunding / WEEKLY_GOAL) * 100, 100);
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -151,21 +145,10 @@ export default function BirdDetailPage() {
           </div>
 
           {(bird.tagline || bird.description) && (
-            <p className="text-neutral-700 leading-relaxed mb-6">
+            <p className="text-neutral-700 leading-relaxed">
               {bird.description || bird.tagline}
             </p>
           )}
-
-          {/* Weekly Progress */}
-          <div className="bg-neutral-50 rounded-xl p-4">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-neutral-600">{t("weeklyGoal")}</span>
-              <span className="font-semibold text-neutral-900">
-                ${currentFunding.toFixed(2)} / ${WEEKLY_GOAL}
-              </span>
-            </div>
-            <Progress value={progressPercentage} className="h-3" />
-          </div>
         </motion.div>
 
         {/* Support Section */}

@@ -330,22 +330,6 @@ export function usePhantom(): UsePhantomResult {
         setIsPhantomInstalled(true);
       }
 
-      // Check for previously connected wallet in localStorage
-      const savedWallet = getConnectedWallet();
-      if (savedWallet) {
-        try {
-          setPublicKey(new PublicKey(savedWallet));
-          setIsConnected(true);
-          setConnectionMethod("deeplink");
-          console.log("Restored wallet from localStorage:", savedWallet);
-          setIsLoading(false);
-          return;
-        } catch {
-          // Invalid saved wallet, clear it
-          clearConnectedWallet();
-        }
-      }
-
       // Check SDK first
       if (sdkState?.isConnected && solanaSDK) {
         try {
@@ -363,7 +347,7 @@ export function usePhantom(): UsePhantomResult {
         }
       }
 
-      // Check browser extension
+      // Check browser extension - always check this so we have a signing method
       const phantomProvider = getProvider();
       setProvider(phantomProvider);
       if (phantomProvider) {
@@ -372,6 +356,23 @@ export function usePhantom(): UsePhantomResult {
           setPublicKey(phantomProvider.publicKey);
           setIsConnected(true);
           setConnectionMethod("extension");
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Check for previously connected wallet in localStorage (mobile deeplink flow)
+      const savedWallet = getConnectedWallet();
+      if (savedWallet) {
+        try {
+          setPublicKey(new PublicKey(savedWallet));
+          setIsConnected(true);
+          // If we have an extension provider, use it for signing even if wallet was saved from deeplink
+          setConnectionMethod(phantomProvider ? "extension" : "deeplink");
+          console.log("Restored wallet from localStorage:", savedWallet);
+        } catch {
+          // Invalid saved wallet, clear it
+          clearConnectedWallet();
         }
       }
 
@@ -570,12 +571,20 @@ export function usePhantom(): UsePhantomResult {
       }
 
       if (provider) {
+        // If provider exists but not connected, try to connect first
+        if (!provider.isConnected) {
+          try {
+            await provider.connect();
+          } catch (connectErr) {
+            console.error("Failed to reconnect provider:", connectErr);
+          }
+        }
         const tx = Transaction.from(Buffer.from(serializedTransaction, "base64"));
         const signed = await provider.signTransaction(tx);
         return Buffer.from(signed.serialize({ requireAllSignatures: false, verifySignatures: false })).toString("base64");
       }
 
-      throw new Error("No signing method available");
+      throw new Error("No signing method available. Please reconnect your wallet.");
     },
     [provider, solanaSDK, isConnected]
   );
