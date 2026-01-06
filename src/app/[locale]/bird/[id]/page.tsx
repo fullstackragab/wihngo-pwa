@@ -169,7 +169,7 @@ export default function BirdDetailPage() {
           )}
 
           {/* Support Button */}
-          {bird.canSupport !== false && !bird.isMemorial && (
+          {bird.canSupport !== false && !bird.isMemorial && !isOwner && (
             <div className="pt-4">
               <Link href={`/birds/${bird.birdId}/support`}>
                 <Button size="lg" className="w-full rounded-full gap-2">
@@ -201,7 +201,7 @@ export default function BirdDetailPage() {
           )}
 
           {/* Reassurance */}
-          {bird.canSupport !== false && !bird.isMemorial && (
+          {bird.canSupport !== false && !bird.isMemorial && !isOwner && (
             <p className="text-center text-sm text-muted-foreground">
               100% of your support goes directly to help this bird
             </p>
