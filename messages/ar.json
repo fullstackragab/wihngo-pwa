@@ -687,5 +687,48 @@
     "enterWallet": "يرجى إدخال عنوان محفظة لاستقبال الدعم",
     "uploadFailed": "فشل رفع الصورة. يرجى المحاولة مرة أخرى.",
     "walletNotConnected": "المحفظة غير متصلة"
+  },
+  "admin": {
+    "title": "الإدارة",
+    "subtitle": "مراجعة القصص",
+    "refresh": "تحديث",
+    "tryAgain": "حاول مرة أخرى",
+    "cancel": "إلغاء",
+    "back": "رجوع",
+    "status": {
+      "pending": "قيد المراجعة",
+      "approved": "تمت الموافقة",
+      "rejected": "مرفوض"
+    },
+    "stories": {
+      "title": "القصص المعلقة",
+      "subtitle": "مراجعة ومراقبة المشاركات المجتمعية",
+      "count": "{count} قصة بانتظار المراجعة",
+      "noPending": "تم الانتهاء!",
+      "allReviewed": "لا توجد قصص بانتظار المراجعة.",
+      "loadError": "فشل تحميل القصص المعلقة",
+      "noDescription": "بدون وصف"
+    },
+    "review": {
+      "description": "الوصف",
+      "noDescription": "لم يتم تقديم وصف",
+      "storyId": "معرف القصة",
+      "submittedBy": "مقدم من",
+      "rejectionReason": "سبب الرفض",
+      "approve": "موافقة",
+      "reject": "رفض",
+      "hide": "إخفاء",
+      "approveTitle": "الموافقة على هذه القصة؟",
+      "approveDesc": "ستصبح هذه القصة مرئية للعامة.",
+      "rejectTitle": "رفض هذه القصة؟",
+      "rejectDesc": "لن يتم نشر هذه القصة. يرجى تقديم سبب.",
+      "hideTitle": "إخفاء هذه القصة؟",
+      "hideDesc": "سيتم إخفاء هذه القصة عن العرض العام. يرجى تقديم سبب.",
+      "reasonLabel": "السبب",
+      "reasonPlaceholder": "أدخل سبب هذا الإجراء...",
+      "notFound": "القصة غير موجودة",
+      "notFoundDesc": "ربما تم حذف هذه القصة أو أنها غير موجودة.",
+      "backToList": "العودة إلى القصص"
+    }
   }
 }

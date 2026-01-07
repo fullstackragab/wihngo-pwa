@@ -687,5 +687,48 @@
     "enterWallet": "Please enter a wallet address to receive support",
     "uploadFailed": "Failed to upload image. Please try again.",
     "walletNotConnected": "Wallet not connected"
+  },
+  "admin": {
+    "title": "Admin",
+    "subtitle": "Story Moderation",
+    "refresh": "Refresh",
+    "tryAgain": "Try Again",
+    "cancel": "Cancel",
+    "back": "Back",
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "stories": {
+      "title": "Pending Stories",
+      "subtitle": "Review and moderate community submissions",
+      "count": "{count} stories pending review",
+      "noPending": "All caught up!",
+      "allReviewed": "No stories waiting for review.",
+      "loadError": "Failed to load pending stories",
+      "noDescription": "No description"
+    },
+    "review": {
+      "description": "Description",
+      "noDescription": "No description provided",
+      "storyId": "Story ID",
+      "submittedBy": "Submitted by",
+      "rejectionReason": "Rejection reason",
+      "approve": "Approve",
+      "reject": "Reject",
+      "hide": "Hide",
+      "approveTitle": "Approve this story?",
+      "approveDesc": "This story will become publicly visible.",
+      "rejectTitle": "Reject this story?",
+      "rejectDesc": "This story will not be published. Please provide a reason.",
+      "hideTitle": "Hide this story?",
+      "hideDesc": "This story will be hidden from public view. Please provide a reason.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Enter reason for this action...",
+      "notFound": "Story not found",
+      "notFoundDesc": "This story may have been deleted or doesn't exist.",
+      "backToList": "Back to Stories"
+    }
   }
 }

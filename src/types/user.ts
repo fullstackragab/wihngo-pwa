@@ -8,6 +8,7 @@ export type User = {
   profileImageS3Key?: string;
   location?: string;
   isOwner?: boolean;
+  isAdmin?: boolean;
 };
 
 export type UserProfile = User & {

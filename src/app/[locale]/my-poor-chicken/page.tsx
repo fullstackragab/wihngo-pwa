@@ -40,20 +40,6 @@ export default function MyPoorChickenPage() {
             </p>
           </div>
 
-          {/* Divider */}
-          <div className="border-t border-neutral-200 pt-6">
-            <p className="text-lg leading-relaxed text-neutral-700 whitespace-pre-line">
-              {t("otherChickens")}
-            </p>
-          </div>
-
-          {/* Why Wihngo */}
-          <div className="bg-primary/5 rounded-xl p-6 border border-primary/10">
-            <p className="text-lg leading-relaxed text-neutral-800 whitespace-pre-line">
-              {t("whyWihngo")}
-            </p>
-          </div>
-
           {/* Responsibility */}
           <div className="pt-4">
             <p className="text-lg leading-relaxed text-neutral-700 font-medium whitespace-pre-line">
