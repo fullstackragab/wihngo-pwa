@@ -28,6 +28,7 @@ import {
   Globe,
   Flower2,
   CalendarClock,
+  Play,
 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import Link from "next/link";
@@ -333,6 +334,18 @@ export default function ProfilePage() {
             </div>
           </Link>
 
+          <Link href="/community-stories">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Play className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{t("loveStories")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {t("loveStoriesDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
           <h3 className="text-sm font-medium text-muted-foreground px-1 pt-3">
             {t("learnMore")}
           </h3>
@@ -419,6 +432,18 @@ export default function ProfilePage() {
           <h3 className="text-sm font-medium text-muted-foreground px-1">
             {t("ethicalPosition")}
           </h3>
+
+          <Link href="/my-poor-chicken">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{t("myPoorChicken")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {t("myPoorChickenDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
 
           <Link href="/chicken-happiness">
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">

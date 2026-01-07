@@ -11,6 +11,9 @@ import {
   OnChainBalanceResponse,
   PreflightRequest,
   PreflightResponse,
+  WeeklyEligibilityResponse,
+  GiftSupportRequest,
+  RecordSupportRequest,
 } from "@/types/support";
 import {
   getOrCreateIdempotencyKey,
@@ -208,6 +211,98 @@ export async function getSupportStatus(intentId: string): Promise<SupportIntent>
 // Cancel a pending support intent
 export async function cancelSupport(intentId: string): Promise<void> {
   return apiHelper.post(`support/intents/${intentId}/cancel`, {});
+}
+
+// ============================================
+// WEEKLY ELIGIBILITY (Caretaker Cap Check)
+// ============================================
+
+/**
+ * Check weekly eligibility for a caretaker (user receiving support)
+ * Returns their weekly cap, amount received this week, and remaining allowance
+ *
+ * IMPORTANT: This determines if baseline support can be sent
+ * - If remaining > 0: baseline support allowed
+ * - If remaining <= 0: only gifts allowed
+ */
+export async function getWeeklyEligibility(
+  userId: string
+): Promise<WeeklyEligibilityResponse> {
+  return withRetry(
+    () => publicGet<WeeklyEligibilityResponse>(`support/eligibility?userId=${userId}`),
+    RETRY_PRESETS.network
+  );
+}
+
+// ============================================
+// ONE-TIME GIFT SUPPORT
+// ============================================
+
+/**
+ * Create a gift support intent (bypasses weekly caps)
+ * Gifts are instant, explicit, and do NOT affect weekly baseline logic
+ */
+export async function createGiftIntent(params: {
+  recipientUserId: string;
+  amount: number;
+  birdId?: string;
+  userId?: string;
+}): Promise<SupportIntentResponse> {
+  let idempotencyKey: string | undefined;
+  if (params.userId) {
+    idempotencyKey = await getOrCreateIdempotencyKey({
+      userId: params.userId,
+      birdId: params.birdId || "gift",
+      birdAmount: params.amount,
+      wihngoAmount: 0,
+    });
+  }
+
+  const requestBody: Record<string, unknown> = {
+    type: "gift",
+    recipientUserId: params.recipientUserId,
+    amount: params.amount,
+    currency: "USDC",
+  };
+
+  if (params.birdId) {
+    requestBody.birdId = params.birdId;
+  }
+
+  if (idempotencyKey) {
+    requestBody.idempotencyKey = idempotencyKey;
+  }
+
+  const response = await withRetry(
+    () => apiHelper.post<SupportIntent>("support/gifts", requestBody),
+    RETRY_PRESETS.network
+  );
+
+  return {
+    intentId: response.intentId,
+    birdWallet: response.birdWalletAddress,
+    wihngoWallet: null,
+    usdcMint: response.usdcMintAddress,
+    serializedTransaction: response.serializedTransaction,
+    expiresAt: response.expiresAt,
+  };
+}
+
+/**
+ * Record a support transaction after blockchain confirmation
+ * Backend verifies on Solana RPC and classifies as baseline or gift
+ *
+ * IMPORTANT: Backend is the authority on transaction classification
+ * - If remaining > 0 → baseline (counts toward cap)
+ * - Else → gift (does not count toward cap)
+ */
+export async function recordSupport(
+  data: RecordSupportRequest
+): Promise<{ success: boolean; type: "baseline" | "gift" }> {
+  return apiHelper.post<{ success: boolean; type: "baseline" | "gift" }>(
+    "support/record",
+    data
+  );
 }
 
 // ============================================

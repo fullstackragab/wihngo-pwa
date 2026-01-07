@@ -3,7 +3,7 @@
 import { TopBar } from "./top-bar";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
-import { Bird, Heart, DollarSign } from "lucide-react";
+import { Bird, Heart } from "lucide-react";
 import Image from "next/image";
 
 interface BirdProfileProps {
@@ -47,15 +47,9 @@ export function BirdProfile({ bird, moments, onBack, onSupport }: BirdProfilePro
         <div className="p-4 space-y-6">
           {/* Bird Info */}
           <Card className="p-6 space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 space-y-2">
-                <h2 className="text-foreground text-xl font-medium">{bird.name}</h2>
-                <p className="text-muted-foreground">{bird.species}</p>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-full">
-                <DollarSign className="w-4 h-4 text-primary" />
-                <span className="font-medium text-primary">{bird.totalSupport}</span>
-              </div>
+            <div className="space-y-2">
+              <h2 className="text-foreground text-xl font-medium">{bird.name}</h2>
+              <p className="text-muted-foreground">{bird.species}</p>
             </div>
 
             <p className="text-foreground leading-relaxed">

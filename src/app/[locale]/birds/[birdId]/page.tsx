@@ -7,15 +7,17 @@ import { getBird, loveBird, unloveBird } from "@/services/bird.service";
 import { getBirdStories } from "@/services/story.service";
 import { getKindWords } from "@/services/kind-words.service";
 import { useAuth } from "@/contexts/auth-context";
+import { useEligibility } from "@/hooks/useEligibility";
 import { StoryCard } from "@/components/story-card";
 import { KindWordsSection } from "@/components/kind-words";
 import { Button } from "@/components/ui/button";
 import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
-import { ArrowLeft, Heart, Flower2 } from "lucide-react";
+import { ArrowLeft, Heart, Flower2, Gift, Info, Share2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
+import { isMobileDevice } from "@/lib/phantom/platform";
 
 export default function BirdDetailPage() {
   const params = useParams();
@@ -42,6 +44,15 @@ export default function BirdDetailPage() {
     queryFn: () => getKindWords(birdId),
     enabled: !!birdId && isAuthenticated,
   });
+
+  // Fetch caretaker's weekly eligibility (for baseline support cap)
+  const {
+    canReceiveBaseline,
+    hasReachedCap,
+    remaining,
+    weeklyCap,
+    isLoading: eligibilityLoading,
+  } = useEligibility(bird?.ownerId);
 
   const loveMutation = useMutation({
     mutationFn: () => (bird?.isLoved ? unloveBird(birdId) : loveBird(birdId)),
@@ -77,6 +88,31 @@ export default function BirdDetailPage() {
 
   const isOwner = user?.userId === bird.ownerId;
 
+  // Share with pooled impact messaging - "Help more birds", not "Share this bird"
+  const handleShare = async () => {
+    const shareData = {
+      title: "Help feed birds on Wihngo",
+      text: `${bird.name || "This bird"} represents many others. Your support feeds birds equally - $1 keeps a bird fed for a week.`,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // User cancelled or share failed
+      }
+    } else {
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(`${shareData.text}\n\n${shareData.url}`);
+        // Could show a toast here
+      } catch {
+        // Clipboard failed
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Header */}
@@ -89,7 +125,7 @@ export default function BirdDetailPage() {
             <ArrowLeft className="w-5 h-5 text-neutral-700" />
           </button>
           <h1 className="text-xl font-semibold text-neutral-900">
-            Support {bird.name}
+            {bird.name || "Bird"}
           </h1>
         </div>
       </div>
@@ -125,9 +161,9 @@ export default function BirdDetailPage() {
           className="bg-white rounded-2xl p-6 mb-6 shadow-sm"
         >
           <div className="flex items-baseline justify-between mb-3">
-            <h2 className="text-3xl font-bold text-neutral-900">{bird.name}</h2>
+            <h2 className="text-3xl font-bold text-neutral-900">{bird.name || "Bird"}</h2>
             <div className="flex items-center gap-3">
-              <span className="text-lg text-neutral-600">{bird.species}</span>
+              <span className="text-lg text-neutral-600">{bird.species || ""}</span>
               <button
                 onClick={() => loveMutation.mutate()}
                 disabled={loveMutation.isPending}
@@ -149,26 +185,77 @@ export default function BirdDetailPage() {
               {bird.description || bird.tagline}
             </p>
           )}
+
+          {/* Share button - "Help more birds" not "Share this bird" */}
+          <button
+            onClick={handleShare}
+            className="mt-4 flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+          >
+            <Share2 className="w-4 h-4" />
+            <span>{t("helpMoreBirds")}</span>
+          </button>
         </motion.div>
 
         {/* Support Section */}
-        {bird.canSupport !== false && !bird.isMemorial && (
+        {bird.canSupport !== false && !bird.isMemorial && !isOwner && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl p-6 shadow-sm mb-6"
+            className="bg-white rounded-2xl p-6 shadow-sm mb-6 space-y-4"
           >
-            <Link href={`/birds/${bird.birdId}/support`}>
+            {/* PRIMARY CTA: Support all birds (pooled impact) */}
+            <Link href="/birds/needs-support">
               <Button
                 size="lg"
                 className="w-full bg-primary hover:bg-primary-hover text-white py-6 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all"
               >
-                Support {bird.name}
+                {t("supportAllBirds")}
               </Button>
             </Link>
-            <p className="text-center text-sm text-neutral-500 mt-4">
-              {t("support100Percent")}
+
+            {/* SECONDARY CTA: Support this bird only (de-emphasized) */}
+            {canReceiveBaseline ? (
+              <Link href={`/birds/${bird.birdId}/support`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-muted-foreground hover:text-foreground py-3 text-sm"
+                >
+                  {t("supportThisBirdOnly")}
+                </Button>
+              </Link>
+            ) : (
+              <div className="space-y-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled
+                  className="w-full py-3 text-sm opacity-50 cursor-not-allowed"
+                >
+                  {t("supportThisBirdOnly")}
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  {t("caretakerCapReached")}
+                </p>
+              </div>
+            )}
+
+            {/* TERTIARY: One-Time Gift */}
+            <Link href={`/birds/${bird.birdId}/gift`}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-muted-foreground hover:text-foreground py-3 text-sm gap-2"
+              >
+                <Gift className="w-4 h-4" />
+                {t("sendOneTimeGift")}
+              </Button>
+            </Link>
+
+            {/* Pooled distribution explanation - calm, not preachy */}
+            <p className="text-center text-sm text-neutral-500">
+              {t("supportDistributed")}
             </p>
           </motion.div>
         )}

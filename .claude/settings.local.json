@@ -22,7 +22,8 @@
       "Bash(file:*)",
       "Bash(dir:*)",
       "Bash(dir \"C:\\\\_companies\\\\wihngo\\\\*.zip\")",
-      "WebFetch(domain:next-intl.dev)"
+      "WebFetch(domain:next-intl.dev)",
+      "Bash(wc:*)"
     ]
   }
 }

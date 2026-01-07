@@ -183,6 +183,76 @@ export const MIN_BIRD_AMOUNT = 0.01;
 export const MAX_BIRD_AMOUNT = 1000;
 export const MINIMUM_SOL_FOR_GAS = 0.005;
 
+// ============================================
+// WEEKLY CAP ELIGIBILITY (Caretaker Weekly Limit)
+// ============================================
+
+/**
+ * Weekly eligibility response for a caretaker (user receiving support)
+ * Used to enforce: "One user = one wallet = capped baseline support"
+ */
+export interface WeeklyEligibilityResponse {
+  /** User ID of the caretaker */
+  userId: string;
+  /** Maximum baseline support allowed per week (e.g., 5 USDC) */
+  weeklyCap: number;
+  /** Total baseline support received this week */
+  receivedThisWeek: number;
+  /** Remaining allowance for this week */
+  remaining: number;
+  /** ISO week identifier (YYYY-WW format) */
+  weekId: string;
+  /** Whether caretaker can receive baseline support (remaining > 0) */
+  canReceiveBaseline: boolean;
+  /** Whether caretaker has a linked wallet */
+  hasWallet: boolean;
+  /** Caretaker's wallet address */
+  walletAddress?: string;
+  /** Caretaker's display name */
+  caretakerName?: string;
+}
+
+/**
+ * Record a support transaction (after blockchain confirmation)
+ */
+export interface RecordSupportRequest {
+  /** Solana transaction signature */
+  txSignature: string;
+  /** Transaction type: baseline counts toward cap, gift does not */
+  type?: SupportType;
+  /** Amount in USDC */
+  amount: number;
+  /** Recipient user ID */
+  toUserId: string;
+  /** Optional bird reference */
+  birdId?: string;
+}
+
+/**
+ * Support transaction types
+ * - baseline: Counts toward weekly cap
+ * - gift: One-time gift, bypasses weekly cap
+ */
+export type SupportType = "baseline" | "gift";
+
+/**
+ * Gift support request payload
+ */
+export interface GiftSupportRequest {
+  type: "gift";
+  amount: number;
+  /** Optional bird reference (for display purposes only) */
+  birdId?: string;
+}
+
+// Gift amount presets
+export const PRESET_GIFT_AMOUNTS = [5, 20, 100] as const;
+export type PresetGiftAmount = (typeof PRESET_GIFT_AMOUNTS)[number];
+
+// ============================================
+// LEGACY EXPORTS
+// ============================================
+
 // Legacy exports for backwards compatibility
 export type TransactionConfirmation = {
   type: "BIRD" | "WIHNGO";
