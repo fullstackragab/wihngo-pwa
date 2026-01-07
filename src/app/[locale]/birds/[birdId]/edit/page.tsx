@@ -13,8 +13,12 @@ import { LoadingScreen } from "@/components/ui/loading";
 import { ArrowLeft, Camera, Heart, Eye, EyeOff, HandHeart } from "lucide-react";
 import Image from "next/image";
 import { IMAGE_CONFIG } from "@/lib/config";
+import { useTranslations } from "next-intl";
 
 export default function EditBirdPage() {
+  const t = useTranslations("editBird");
+  const tBirds = useTranslations("birds");
+  const tCommon = useTranslations("common");
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -125,9 +129,9 @@ export default function EditBirdPage() {
     return (
       <div className="min-h-screen-safe flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Bird not found</p>
+          <p className="text-muted-foreground mb-4">{tBirds("birdNotFound")}</p>
           <Button onClick={() => router.push("/profile/my-birds")}>
-            Back to My Birds
+            {tCommon("goBack")}
           </Button>
         </div>
       </div>
@@ -163,12 +167,12 @@ export default function EditBirdPage() {
     setError(null);
 
     if (!name.trim()) {
-      setError("Name is required");
+      setError(t("nameRequired"));
       return;
     }
 
     if (!species.trim()) {
-      setError("Species is required");
+      setError(t("speciesRequired"));
       return;
     }
 
@@ -191,7 +195,7 @@ export default function EditBirdPage() {
       });
     } catch (err) {
       console.error("Failed to update bird:", err);
-      setError(err instanceof Error ? err.message : "Failed to save changes");
+      setError(err instanceof Error ? err.message : t("failedToSave"));
     }
   };
 
@@ -222,7 +226,7 @@ export default function EditBirdPage() {
           <button onClick={() => router.back()} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6 text-muted-foreground" />
           </button>
-          <h1 className="text-xl font-bold text-foreground">Edit {bird.name}</h1>
+          <h1 className="text-xl font-bold text-foreground">{t("title")} - {bird.name}</h1>
         </div>
       </header>
 
@@ -284,34 +288,34 @@ export default function EditBirdPage() {
           <Card variant="outlined" padding="md">
             <div className="space-y-4">
               <Input
-                label="Name"
+                label={t("name")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Bird's name"
+                placeholder={t("name")}
                 required
               />
               <Input
-                label="Species"
+                label={t("species")}
                 value={species}
                 onChange={(e) => setSpecies(e.target.value)}
-                placeholder="e.g., Canary, Parakeet"
+                placeholder={t("species")}
                 required
               />
               <Input
-                label="Age"
+                label={t("age")}
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
-                placeholder="e.g., 2 years, Young"
+                placeholder={t("age")}
               />
               <Input
-                label="Location"
+                label={t("location")}
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g., Cairo, Egypt"
+                placeholder={t("location")}
               />
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">
-                  Story / Description
+                  {t("about")}
                 </label>
                 <textarea
                   value={description}
@@ -336,11 +340,11 @@ export default function EditBirdPage() {
                   <HandHeart className={`w-5 h-5 ${needsSupport ? 'text-amber-600' : 'text-muted-foreground'}`} />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">Needs Support</p>
+                  <p className="font-medium text-foreground">{t("requestingSupport")}</p>
                   <p className="text-sm text-muted-foreground">
                     {needsSupport
-                      ? "Shown in 'Birds Need Support' - asking community for help"
-                      : "Not requesting community support right now"}
+                      ? t("requestingSupportDesc")
+                      : t("notRequestingSupport")}
                   </p>
                   {bird?.timesSupportedThisWeek !== undefined && bird.timesSupportedThisWeek > 0 && (
                     <p className="text-xs text-primary mt-1">
@@ -374,11 +378,11 @@ export default function EditBirdPage() {
                   )}
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">Public Profile</p>
+                  <p className="font-medium text-foreground">{t("publiclyVisible")}</p>
                   <p className="text-sm text-muted-foreground">
                     {isPublic
-                      ? "Visible to everyone in bird listings"
-                      : "Hidden from public - only you can see this bird"}
+                      ? t("publiclyVisibleDesc")
+                      : t("notPubliclyVisible")}
                   </p>
                 </div>
               </div>
@@ -418,7 +422,7 @@ export default function EditBirdPage() {
             fullWidth
             isLoading={updateMutation.isPending}
           >
-            Save Changes
+            {t("saveChanges")}
           </Button>
         </form>
       </main>

@@ -141,9 +141,9 @@ export default function ProfilePage() {
               )}
             </div>
             <div className="flex-1">
-              <h3>{user.name || "Bird Supporter"}</h3>
+              <h3>{user.name}</h3>
               <p className="text-sm text-muted-foreground">
-                {user.bio || "Making the world kinder for birds"}
+                {user.bio || t("defaultBio")}
               </p>
             </div>
           </div>

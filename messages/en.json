@@ -200,7 +200,8 @@
     "noLovedBirdsYet": "No loved birds yet",
     "tapHeartToSave": "Tap the heart on birds you love to save them here",
     "weeklySupport": "Weekly Support",
-    "weeklySupportDesc": "Manage your recurring bird support"
+    "weeklySupportDesc": "Manage your recurring bird support",
+    "defaultBio": "Making the world kinder for birds"
   },
   "weeklySupport": {
     "title": "Weekly Support",
@@ -365,7 +366,13 @@
     "backToHome": "Back to Home",
     "supportMoreBirds": "Support More Birds",
     "supportFailed": "Support Failed",
-    "tryAgain": "Try Again"
+    "tryAgain": "Try Again",
+    "failedToLinkWallet": "Failed to link wallet",
+    "failedToConnectWallet": "Failed to connect wallet",
+    "transactionFailed": "Transaction failed",
+    "unableToProcess": "Unable to process support",
+    "unexpectedError": "An unexpected error occurred",
+    "waitingForPhantom": "Waiting for Phantom"
   },
   "birds": {
     "title": "Birds",
@@ -412,7 +419,35 @@
     "viewTributes": "View Tributes & Memorial",
     "stories": "Stories",
     "noStoriesYet": "No stories yet",
-    "goBack": "Go Back"
+    "goBack": "Go Back",
+    "bird": "Bird",
+    "caretaker": "Caretaker",
+    "anonymous": "Anonymous",
+    "user": "User",
+    "helpFeedBirds": "Help feed birds on Wihngo",
+    "shareText": "{name} represents many others. Your support feeds birds equally - $1 keeps a bird fed for a week.",
+    "inLovingMemory": "In Loving Memory",
+    "supportUnavailable": "Support Unavailable",
+    "platformSupport": "Platform Support"
+  },
+  "editBird": {
+    "title": "Edit Bird",
+    "name": "Name",
+    "species": "Species",
+    "age": "Age",
+    "location": "Location",
+    "about": "About",
+    "nameRequired": "Name is required",
+    "speciesRequired": "Species is required",
+    "failedToSave": "Failed to save changes",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "requestingSupport": "Requesting Support",
+    "requestingSupportDesc": "Shown in 'Birds Need Support' - asking community for help",
+    "notRequestingSupport": "Not requesting community support right now",
+    "publiclyVisible": "Publicly Visible",
+    "publiclyVisibleDesc": "Visible to everyone in bird listings",
+    "notPubliclyVisible": "Not visible in public listings"
   },
   "birdsNeedSupport": {
     "title": "Birds Need Support",

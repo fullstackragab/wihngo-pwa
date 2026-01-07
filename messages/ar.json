@@ -200,7 +200,8 @@
     "noLovedBirdsYet": "لا توجد طيور مفضلة بعد",
     "tapHeartToSave": "اضغط على القلب في الطيور التي تحبها لحفظها هنا",
     "weeklySupport": "الدعم الأسبوعي",
-    "weeklySupportDesc": "إدارة دعمك المتكرر للطيور"
+    "weeklySupportDesc": "إدارة دعمك المتكرر للطيور",
+    "defaultBio": "نجعل العالم أكثر لطفاً للطيور"
   },
   "weeklySupport": {
     "title": "الدعم الأسبوعي",
@@ -365,7 +366,13 @@
     "backToHome": "العودة للرئيسية",
     "supportMoreBirds": "ادعم طيورًا أكثر",
     "supportFailed": "فشل الدعم",
-    "tryAgain": "حاول مرة أخرى"
+    "tryAgain": "حاول مرة أخرى",
+    "failedToLinkWallet": "فشل ربط المحفظة",
+    "failedToConnectWallet": "فشل الاتصال بالمحفظة",
+    "transactionFailed": "فشلت المعاملة",
+    "unableToProcess": "تعذر معالجة الدعم",
+    "unexpectedError": "حدث خطأ غير متوقع",
+    "waitingForPhantom": "في انتظار Phantom"
   },
   "birds": {
     "title": "الطيور",
@@ -412,7 +419,35 @@
     "viewTributes": "عرض التحيات والذكرى",
     "stories": "القصص",
     "noStoriesYet": "لا توجد قصص بعد",
-    "goBack": "العودة"
+    "goBack": "العودة",
+    "bird": "طائر",
+    "caretaker": "مربي",
+    "anonymous": "مجهول",
+    "user": "مستخدم",
+    "helpFeedBirds": "ساعد في إطعام الطيور على وينغو",
+    "shareText": "{name} يمثل الكثيرين. دعمك يُطعم الطيور بالتساوي - دولار واحد يُطعم طائراً لمدة أسبوع.",
+    "inLovingMemory": "في ذكرى محبة",
+    "supportUnavailable": "الدعم غير متاح",
+    "platformSupport": "دعم المنصة"
+  },
+  "editBird": {
+    "title": "تعديل الطائر",
+    "name": "الاسم",
+    "species": "النوع",
+    "age": "العمر",
+    "location": "الموقع",
+    "about": "عن الطائر",
+    "nameRequired": "الاسم مطلوب",
+    "speciesRequired": "النوع مطلوب",
+    "failedToSave": "فشل حفظ التغييرات",
+    "saveChanges": "حفظ التغييرات",
+    "saving": "جارٍ الحفظ...",
+    "requestingSupport": "طلب الدعم",
+    "requestingSupportDesc": "يظهر في 'طيور تحتاج للدعم' - يطلب مساعدة المجتمع",
+    "notRequestingSupport": "لا يطلب دعم المجتمع حالياً",
+    "publiclyVisible": "مرئي للجميع",
+    "publiclyVisibleDesc": "مرئي للجميع في قوائم الطيور",
+    "notPubliclyVisible": "غير مرئي في القوائم العامة"
   },
   "birdsNeedSupport": {
     "title": "طيور تحتاج للدعم",
