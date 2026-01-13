@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getCommunityStories } from "@/services/community-story.service";
 import { extractYouTubeId, getYouTubeThumbnail } from "@/types/community-story";
 import { BottomNav } from "@/components/bottom-nav";
-import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
+import { HomePageSkeleton, StoriesGridSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
@@ -25,7 +25,7 @@ export default function HomePage() {
   });
 
   if (authLoading) {
-    return <LoadingScreen />;
+    return <HomePageSkeleton />;
   }
 
   return (
@@ -159,9 +159,7 @@ export default function HomePage() {
         </div>
 
         {storiesLoading ? (
-          <div className="flex justify-center py-8">
-            <LoadingSpinner />
-          </div>
+          <StoriesGridSkeleton count={3} />
         ) : !storiesData?.items || storiesData.items.length === 0 ? (
           /* Warm empty state */
           <div className="bg-white rounded-2xl p-8 text-center shadow-sm">

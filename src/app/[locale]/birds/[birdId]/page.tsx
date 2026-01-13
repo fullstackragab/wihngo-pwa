@@ -11,7 +11,8 @@ import { useEligibility } from "@/hooks/useEligibility";
 import { StoryCard } from "@/components/story-card";
 import { KindWordsSection } from "@/components/kind-words";
 import { Button } from "@/components/ui/button";
-import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
+import { LoadingSpinner } from "@/components/ui/loading";
+import { BirdDetailSkeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Heart, Flower2, Gift, Info, Share2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -72,7 +73,7 @@ export default function BirdDetailPage() {
   }
 
   if (isLoading) {
-    return <LoadingScreen />;
+    return <BirdDetailSkeleton />;
   }
 
   if (error || !bird) {

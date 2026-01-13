@@ -6,7 +6,7 @@ import { getUserStories } from "@/services/story.service";
 import { useAuth } from "@/contexts/auth-context";
 import { StoryCard } from "@/components/story-card";
 import { BottomNav } from "@/components/bottom-nav";
-import { LoadingSpinner } from "@/components/ui/loading";
+import { StoryCardSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, BookOpen, Plus } from "lucide-react";
 import Link from "next/link";
@@ -57,8 +57,10 @@ export default function MyStoriesPage() {
       {/* Content */}
       <main className="max-w-lg mx-auto px-4 py-6">
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <LoadingSpinner size="lg" />
+          <div className="space-y-4">
+            <StoryCardSkeleton />
+            <StoryCardSkeleton />
+            <StoryCardSkeleton />
           </div>
         ) : stories.length === 0 ? (
           <div className="text-center py-12">

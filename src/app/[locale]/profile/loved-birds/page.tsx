@@ -6,7 +6,7 @@ import { getLovedBirds } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
 import { BirdCard } from "@/components/bird-card";
 import { BottomNav } from "@/components/bottom-nav";
-import { LoadingSpinner } from "@/components/ui/loading";
+import { BirdCardSkeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Heart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -47,8 +47,10 @@ export default function LovedBirdsPage() {
       {/* Content */}
       <main className="max-w-lg mx-auto px-4 py-6">
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <LoadingSpinner size="lg" />
+          <div className="grid gap-4">
+            <BirdCardSkeleton />
+            <BirdCardSkeleton />
+            <BirdCardSkeleton />
           </div>
         ) : !birds || birds.length === 0 ? (
           <div className="text-center py-12">

@@ -7,7 +7,7 @@ import { getBird } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { LoadingScreen } from "@/components/ui/loading";
+import { BirdDetailSkeleton } from "@/components/ui/skeleton";
 import { Check, Info, Gift, ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -59,7 +59,7 @@ function GiftContent() {
   }
 
   if (isLoading) {
-    return <LoadingScreen />;
+    return <BirdDetailSkeleton />;
   }
 
   // Check if bird can receive support
@@ -269,7 +269,7 @@ function GiftContent() {
 
 export default function GiftPage() {
   return (
-    <Suspense fallback={<LoadingScreen />}>
+    <Suspense fallback={<BirdDetailSkeleton />}>
       <GiftContent />
     </Suspense>
   );

@@ -13,7 +13,7 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
+import { StoryDetailSkeleton, CommentSkeleton } from "@/components/ui/skeleton";
 import { STORY_MOODS } from "@/types/story";
 import {
   ArrowLeft,
@@ -72,7 +72,7 @@ export default function StoryDetailPage() {
   }
 
   if (isLoading) {
-    return <LoadingScreen />;
+    return <StoryDetailSkeleton />;
   }
 
   if (!story) {
@@ -251,8 +251,10 @@ export default function StoryDetailPage() {
 
           {/* Comments List */}
           {commentsLoading ? (
-            <div className="flex justify-center py-8">
-              <LoadingSpinner />
+            <div className="space-y-4">
+              <CommentSkeleton />
+              <CommentSkeleton />
+              <CommentSkeleton />
             </div>
           ) : !comments || comments.length === 0 ? (
             <Card variant="outlined" className="text-center py-8">

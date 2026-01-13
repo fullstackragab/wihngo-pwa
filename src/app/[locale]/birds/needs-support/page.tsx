@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { getBirdsNeedingSupport } from "@/services/bird.service";
 import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
-import { LoadingScreen } from "@/components/ui/loading";
+import { BirdGridSkeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   Heart,
@@ -103,7 +103,18 @@ export default function BirdsNeedSupportPage() {
   });
 
   if (isLoading) {
-    return <LoadingScreen />;
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <div className="h-8 bg-neutral-200 rounded w-48 animate-pulse" />
+          </div>
+        </div>
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <BirdGridSkeleton count={6} />
+        </div>
+      </div>
+    );
   }
 
   const birds = data?.birds || [];

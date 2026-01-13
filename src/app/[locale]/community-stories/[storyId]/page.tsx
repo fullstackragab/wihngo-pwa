@@ -7,7 +7,7 @@ import {
   extractYouTubeId,
   getYouTubeEmbedUrl,
 } from "@/types/community-story";
-import { LoadingScreen } from "@/components/ui/loading";
+import { CommunityStoryDetailSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Heart } from "lucide-react";
 import Link from "next/link";
@@ -28,7 +28,7 @@ export default function CommunityStoryDetailPage() {
   });
 
   if (isLoading) {
-    return <LoadingScreen />;
+    return <CommunityStoryDetailSkeleton />;
   }
 
   if (error || !story) {

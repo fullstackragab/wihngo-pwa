@@ -45,3 +45,8 @@ figma-supabase-db-password.txt
 Wihngo Donation App Design.zip
 
 nul
+# Claude temp files
+tmpclaude-*
+
+# Claude Code local settings
+.claude/settings.local.json

@@ -7,7 +7,8 @@ import { createBird, preUploadBirdImage } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
+import { LoadingSpinner } from "@/components/ui/loading";
+import { ProfileSkeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   Camera,
@@ -138,7 +139,7 @@ export default function CreateBirdPage() {
   const canSubmit = name.trim() && species.trim() && !isSubmitting;
 
   if (authLoading) {
-    return <LoadingScreen />;
+    return <ProfileSkeleton />;
   }
 
   if (!isAuthenticated) {

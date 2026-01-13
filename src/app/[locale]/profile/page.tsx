@@ -8,7 +8,8 @@ import { linkWallet, unlinkWallet } from "@/services/wallet.service";
 import { isMobileDevice } from "@/lib/phantom/platform";
 import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
-import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
+import { LoadingSpinner } from "@/components/ui/loading";
+import { ProfileSkeleton } from "@/components/ui/skeleton";
 import {
   User,
   Wallet,
@@ -105,7 +106,7 @@ export default function ProfilePage() {
   }, [isLoading, isAuthenticated, router]);
 
   if (isLoading) {
-    return <LoadingScreen />;
+    return <ProfileSkeleton />;
   }
 
   if (!isAuthenticated || !user) {

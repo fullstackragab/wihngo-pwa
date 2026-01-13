@@ -6,7 +6,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getBird, getMemorial, getMemorialMessages, postMemorialMessage } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
-import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
+import { LoadingSpinner } from "@/components/ui/loading";
+import { BirdDetailSkeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Heart, Send, Calendar, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -60,7 +61,7 @@ export default function MemorialPage() {
   };
 
   if (birdLoading) {
-    return <LoadingScreen />;
+    return <BirdDetailSkeleton />;
   }
 
   if (!bird) {

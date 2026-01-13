@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getBirds, getBirdsNeedingSupport, searchBirds } from "@/services/bird.service";
 import { BirdCard } from "@/components/bird-card";
 import { BottomNav } from "@/components/bottom-nav";
-import { LoadingSpinner } from "@/components/ui/loading";
+import { BirdGridSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Bird as BirdIcon, Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -162,9 +162,7 @@ export default function BirdsPage() {
       {/* Bird Grid */}
       <div className="max-w-6xl mx-auto px-4 py-6">
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <LoadingSpinner size="lg" />
-          </div>
+          <BirdGridSkeleton count={6} />
         ) : displayBirds.length === 0 ? (
           <div className="text-center py-16 text-neutral-600">
             <BirdIcon className="w-16 h-16 text-neutral-300 mx-auto mb-4" />

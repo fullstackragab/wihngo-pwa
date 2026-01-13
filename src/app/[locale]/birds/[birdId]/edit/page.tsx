@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { LoadingScreen } from "@/components/ui/loading";
+import { BirdDetailSkeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Camera, Heart, Eye, EyeOff, HandHeart } from "lucide-react";
 import Image from "next/image";
 import { IMAGE_CONFIG } from "@/lib/config";
@@ -122,7 +122,7 @@ export default function EditBirdPage() {
   }
 
   if (isLoading || isFetching) {
-    return <LoadingScreen />;
+    return <BirdDetailSkeleton />;
   }
 
   if (!bird) {

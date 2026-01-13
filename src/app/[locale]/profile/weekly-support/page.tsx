@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
-import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
+import { LoadingSpinner } from "@/components/ui/loading";
+import { ListItemSkeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   Calendar,
@@ -129,7 +130,21 @@ export default function WeeklySupportPage() {
   };
 
   if (authLoading || isLoading) {
-    return <LoadingScreen />;
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
+          <div className="max-w-2xl mx-auto px-4 py-4">
+            <div className="h-8 bg-neutral-200 rounded w-40 animate-pulse" />
+          </div>
+        </div>
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+          <ListItemSkeleton />
+          <ListItemSkeleton />
+          <ListItemSkeleton />
+          <ListItemSkeleton />
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {

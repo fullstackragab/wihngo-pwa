@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
-import { LoadingScreen } from "@/components/ui/loading";
+import { BirdDetailSkeleton } from "@/components/ui/skeleton";
 import { Check, Info, Heart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -62,7 +62,7 @@ function SupportContent() {
   }
 
   if (isLoading) {
-    return <LoadingScreen />;
+    return <BirdDetailSkeleton />;
   }
 
   // Check if bird can receive support
@@ -341,7 +341,7 @@ function SupportContent() {
 
 export default function SupportPage() {
   return (
-    <Suspense fallback={<LoadingScreen />}>
+    <Suspense fallback={<BirdDetailSkeleton />}>
       <SupportContent />
     </Suspense>
   );

@@ -10,7 +10,8 @@ import { useAuth } from "@/contexts/auth-context";
 import { StoryCard } from "@/components/story-card";
 import { KindWordsSection } from "@/components/kind-words";
 import { Button } from "@/components/ui/button";
-import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
+import { LoadingSpinner } from "@/components/ui/loading";
+import { BirdDetailSkeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Heart, MapPin, Flower2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -59,7 +60,7 @@ export default function BirdDetailPage() {
   }
 
   if (isLoading) {
-    return <LoadingScreen />;
+    return <BirdDetailSkeleton />;
   }
 
   if (error || !bird) {

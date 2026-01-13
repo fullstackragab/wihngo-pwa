@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getMyBirds } from "@/services/bird.service";
 import { useAuth } from "@/contexts/auth-context";
 import { BottomNav } from "@/components/bottom-nav";
-import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading";
+import { ProfileSkeleton, BirdCardSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Bird, Plus, Pencil, Heart, Users } from "lucide-react";
 import Link from "next/link";
@@ -33,7 +33,7 @@ export default function MyBirdsPage() {
   }, [authLoading, isAuthenticated, router]);
 
   if (authLoading) {
-    return <LoadingScreen />;
+    return <ProfileSkeleton />;
   }
 
   if (!isAuthenticated) {
@@ -69,8 +69,10 @@ export default function MyBirdsPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <LoadingSpinner />
+          <div className="space-y-4">
+            <BirdCardSkeleton />
+            <BirdCardSkeleton />
+            <BirdCardSkeleton />
           </div>
         ) : !birds || birds.length === 0 ? (
           <motion.div
