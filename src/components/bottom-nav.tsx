@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, Search, Heart, User } from "lucide-react";
+import { House, Search, BookOpen, Info } from "lucide-react";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 
-type TabId = "home" | "explore" | "support" | "profile";
+type TabId = "home" | "explore" | "knowledge" | "about";
 
 const tabs: { id: TabId; icon: typeof House; path: string }[] = [
   { id: "home", icon: House, path: "/" },
   { id: "explore", icon: Search, path: "/birds" },
-  { id: "support", icon: Heart, path: "/support-wihngo" },
-  { id: "profile", icon: User, path: "/profile" },
+  { id: "knowledge", icon: BookOpen, path: "/knowledge" },
+  { id: "about", icon: Info, path: "/about" },
 ];
 
 export function BottomNav() {
@@ -23,16 +23,9 @@ export function BottomNav() {
     // Remove locale prefix from pathname for matching (e.g., /en/birds -> /birds)
     const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}/, "") || "/";
 
-    // Check for bird support pages first (e.g., /birds/123/support)
-    if (
-      pathWithoutLocale.includes("/birds/") &&
-      pathWithoutLocale.includes("/support")
-    ) {
-      return "support";
-    }
     if (pathWithoutLocale.startsWith("/birds")) return "explore";
-    if (pathWithoutLocale.startsWith("/support-wihngo")) return "support";
-    if (pathWithoutLocale.startsWith("/profile")) return "profile";
+    if (pathWithoutLocale.startsWith("/knowledge")) return "knowledge";
+    if (pathWithoutLocale.startsWith("/about")) return "about";
     return "home";
   };
 

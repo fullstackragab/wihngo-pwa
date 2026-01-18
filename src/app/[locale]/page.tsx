@@ -1,35 +1,31 @@
 "use client";
 
-import { useAuth } from "@/contexts/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { getCommunityStories } from "@/services/community-story.service";
 import { extractYouTubeId, getYouTubeThumbnail } from "@/types/community-story";
-import { BottomNav } from "@/components/bottom-nav";
 import { HomePageSkeleton, StoriesGridSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { PlatformPauseNotice, LegalDisclaimer } from "@/components/platform-pause-notice";
 import Link from "next/link";
 import Image from "next/image";
-import { Bird, CircleCheck, DollarSign, Heart, Play, Plus } from "lucide-react";
+import { Bird, CircleCheck, Heart, Play, Archive } from "lucide-react";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 
 export default function HomePage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const t = useTranslations("home");
   const tStories = useTranslations("communityStories");
 
-  // Fetch recent stories for the home page
+  // Fetch recent stories for the home page (archived content)
   const { data: storiesData, isLoading: storiesLoading } = useQuery({
     queryKey: ["communityStories", "home"],
     queryFn: () => getCommunityStories({ page: 1, pageSize: 3 }),
   });
 
-  if (authLoading) {
-    return <HomePageSkeleton />;
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
+      {/* Platform Pause Notice */}
+      <PlatformPauseNotice />
       {/* Hero Section */}
       <div className="px-6 pt-16 pb-12 text-center max-w-2xl mx-auto">
         <motion.div
@@ -102,7 +98,7 @@ export default function HomePage() {
           {/* Step 2 */}
           <div className="text-center">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <DollarSign className="w-8 h-8 text-blue-600" />
+              <Heart className="w-8 h-8 text-blue-600" />
             </div>
             <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-3 text-sm font-bold">
               2
@@ -161,16 +157,10 @@ export default function HomePage() {
         {storiesLoading ? (
           <StoriesGridSkeleton count={3} />
         ) : !storiesData?.items || storiesData.items.length === 0 ? (
-          /* Warm empty state */
+          /* Empty state for archived platform */
           <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
-            <Heart className="w-12 h-12 text-primary/30 mx-auto mb-4" />
-            <p className="text-neutral-600 mb-4">{t("storiesWillAppear")}</p>
-            <Link href="/community-stories/submit">
-              <Button variant="outline" className="gap-2">
-                <Plus className="w-4 h-4" />
-                {tStories("shareStory")}
-              </Button>
-            </Link>
+            <Archive className="w-12 h-12 text-primary/30 mx-auto mb-4" />
+            <p className="text-neutral-600">{t("storiesWillAppear")}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -242,43 +232,12 @@ export default function HomePage() {
               })}
             </div>
 
-            {/* Share a story CTA */}
-            <div className="text-center pt-4">
-              <Link href="/community-stories/submit">
-                <Button variant="outline" className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  {tStories("shareStory")}
-                </Button>
-              </Link>
-            </div>
           </div>
         )}
       </motion.div>
 
-      {/* Auth Links */}
-      {!isAuthenticated && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-          className="text-center py-8"
-        >
-          <p className="text-muted-foreground text-sm">
-            {t("alreadyHaveAccount")}{" "}
-            <Link href="/auth/login" className="text-primary font-medium hover:underline">
-              {t("signIn")}
-            </Link>
-          </p>
-        </motion.div>
-      )}
-
-      {/* Bottom Nav - only show when authenticated */}
-      {isAuthenticated && (
-        <>
-          <div className="h-20" />
-          <BottomNav />
-        </>
-      )}
+      {/* Legal Disclaimer */}
+      <LegalDisclaimer />
     </div>
   );
 }

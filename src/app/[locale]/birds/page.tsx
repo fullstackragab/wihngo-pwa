@@ -2,43 +2,28 @@
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getBirds, getBirdsNeedingSupport, searchBirds } from "@/services/bird.service";
+import { getBirds, searchBirds } from "@/services/bird.service";
 import { BirdCard } from "@/components/bird-card";
 import { BottomNav } from "@/components/bottom-nav";
 import { BirdGridSkeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
+import { PlatformPauseNotice, LegalDisclaimer } from "@/components/platform-pause-notice";
 import { Bird as BirdIcon, Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Bird, BirdNeedsSupportDto } from "@/types/bird";
 import { motion, AnimatePresence } from "motion/react";
 
-type FilterType = "needsSupport" | "all";
-
 export default function BirdsPage() {
-  const [page, setPage] = useState(1);
-  const [filter, setFilter] = useState<FilterType>("needsSupport");
+  const [page] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
   const t = useTranslations("birds");
 
-  // Fetch birds needing support (default view)
-  const {
-    data: needsSupportData,
-    isLoading: needsSupportLoading,
-  } = useQuery({
-    queryKey: ["birdsNeedingSupport"],
-    queryFn: getBirdsNeedingSupport,
-    enabled: filter === "needsSupport" && !searchQuery,
-  });
-
-  // Fetch all birds
+  // Fetch all birds (archived view)
   const {
     data: allBirdsData,
     isLoading: allBirdsLoading,
   } = useQuery({
     queryKey: ["birds", page],
     queryFn: () => getBirds(page, 20),
-    enabled: filter === "all" && !searchQuery,
+    enabled: !searchQuery,
   });
 
   // Search birds
@@ -51,67 +36,37 @@ export default function BirdsPage() {
     enabled: searchQuery.length >= 2,
   });
 
-  // Convert needs support birds to regular bird format for BirdCard
-  const needsSupportBirds: Bird[] = useMemo(() => {
-    if (!needsSupportData?.birds) return [];
-    return needsSupportData.birds.map((b: BirdNeedsSupportDto) => ({
-      birdId: b.birdId,
-      name: b.name,
-      species: b.species || "",
-      tagline: b.tagline || "",
-      imageUrl: b.imageUrl,
-      location: b.location || undefined,
-      ownerName: b.ownerName,
-      ownerId: b.ownerId,
-      lovedBy: 0,
-      supportedBy: b.totalSupportCount,
-      needsSupport: true,
-    }));
-  }, [needsSupportData?.birds]);
-
   // Determine which birds to show
   const displayBirds = useMemo(() => {
     if (searchQuery.length >= 2) {
       return searchResults || [];
     }
-    if (filter === "needsSupport") {
-      return needsSupportBirds;
-    }
     return allBirdsData?.items || [];
-  }, [searchQuery, searchResults, filter, needsSupportBirds, allBirdsData?.items]);
+  }, [searchQuery, searchResults, allBirdsData?.items]);
 
-  const isLoading = searchQuery.length >= 2
-    ? searchLoading
-    : filter === "needsSupport"
-      ? needsSupportLoading
-      : allBirdsLoading;
-
-  const handleSearch = (value: string) => {
-    setSearchQuery(value);
-    if (value.length >= 2) {
-      setIsSearching(true);
-    } else {
-      setIsSearching(false);
-    }
-  };
+  const isLoading = searchQuery.length >= 2 ? searchLoading : allBirdsLoading;
 
   const clearSearch = () => {
     setSearchQuery("");
-    setIsSearching(false);
   };
 
   return (
     <div className="min-h-screen bg-neutral-50">
+      {/* Platform Pause Notice */}
+      <PlatformPauseNotice />
+
       {/* Header */}
       <div className="bg-white border-b border-neutral-200 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4">
+          <h1 className="text-lg font-semibold text-neutral-800 mb-3">Archived Bird Profiles</h1>
+
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("searchBirds")}
               className="w-full pl-10 pr-10 py-2.5 bg-neutral-100 border-none rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
@@ -124,38 +79,6 @@ export default function BirdsPage() {
               </button>
             )}
           </div>
-
-          {/* Filter Tabs */}
-          {!isSearching && (
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={() => {
-                  setFilter("needsSupport");
-                  setPage(1);
-                }}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  filter === "needsSupport"
-                    ? "bg-primary text-white"
-                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                }`}
-              >
-                {t("filterNeedsSupport")}
-              </button>
-              <button
-                onClick={() => {
-                  setFilter("all");
-                  setPage(1);
-                }}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  filter === "all"
-                    ? "bg-primary text-white"
-                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                }`}
-              >
-                {t("filterAll")}
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -169,12 +92,12 @@ export default function BirdsPage() {
             <h3 className="text-lg font-medium text-neutral-900 mb-2">
               {searchQuery ? t("noBirdsFound") : t("noBirdsYet")}
             </h3>
-            <p>{searchQuery ? t("tryDifferentSearch") : t("checkBackSoon")}</p>
+            <p>{searchQuery ? t("tryDifferentSearch") : "No archived bird profiles available."}</p>
           </div>
         ) : (
           <AnimatePresence mode="wait">
             <motion.div
-              key={filter + searchQuery}
+              key={searchQuery}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -187,24 +110,10 @@ export default function BirdsPage() {
             </motion.div>
           </AnimatePresence>
         )}
-
-        {/* Load More - only for "all" filter */}
-        {filter === "all" &&
-          !searchQuery &&
-          allBirdsData?.items &&
-          allBirdsData.items.length > 0 &&
-          allBirdsData.totalCount > page * 20 && (
-            <div className="text-center mt-8">
-              <Button
-                variant="outline"
-                onClick={() => setPage((p) => p + 1)}
-                className="rounded-xl px-8"
-              >
-                {t("loadMore")}
-              </Button>
-            </div>
-          )}
       </div>
+
+      {/* Legal Disclaimer */}
+      <LegalDisclaimer />
 
       {/* Bottom Nav spacer */}
       <div className="h-20" />

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/top-bar";
 import { Card } from "@/components/ui/card";
+import { PlatformPauseNotice, LegalDisclaimer } from "@/components/platform-pause-notice";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 
@@ -30,8 +31,11 @@ export default function AboutPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background">
       <TopBar title={t("title")} onBack={() => router.back()} />
+
+      {/* Platform Pause Notice */}
+      <PlatformPauseNotice variant="card" />
 
       <div className="max-w-lg mx-auto p-4 space-y-6">
         {/* Hero Section */}
@@ -43,6 +47,19 @@ export default function AboutPage() {
           <p className="text-lg text-muted-foreground leading-relaxed">
             {t("subtitle")}
           </p>
+        </motion.div>
+
+        {/* Archive Note */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+        >
+          <Card className="p-4 bg-amber-50 border-amber-200">
+            <p className="text-amber-800 text-sm leading-relaxed">
+              {t("archiveNote")}
+            </p>
+          </Card>
         </motion.div>
 
         {/* Mission Section */}
@@ -102,6 +119,9 @@ export default function AboutPage() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Legal Disclaimer */}
+      <LegalDisclaimer />
     </div>
   );
 }

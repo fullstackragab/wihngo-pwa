@@ -1,14 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { FeatureDisabled } from "@/components/feature-disabled";
 
 export default function AdminPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/admin/stories");
-  }, [router]);
-
-  return null;
+  return <FeatureDisabled title="Admin" />;
 }
