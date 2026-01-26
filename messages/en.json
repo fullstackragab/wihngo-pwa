@@ -702,7 +702,8 @@
     "fearStatement": "The chicken is afraid,\nknows that her slaughter time is near,\nconstantly checking the slaughter spot:\nHave I been slaughtered now?",
     "geneticMemory": "The genetic memory she inherits tells her that her slaughter time is approaching,\nso she is very afraid.\n\nThis is what no one said.",
     "noLanguage": "Fear needs no language, nor philosophy,\nthe chicken is a creature trapped, with no choice, no escape.",
-    "prison": "The chicken is a prisoner awaiting execution.\nShe knows, and waits, very afraid."
+    "prison": "The chicken is a prisoner awaiting execution.\nShe knows, and waits, very afraid.",
+    "ending": "The poor, helpless chicken"
   },
   "admin": {
     "title": "Admin",

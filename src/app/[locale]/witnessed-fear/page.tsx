@@ -92,6 +92,17 @@ export default function WitnessedFearPage() {
             </p>
           </Card>
         </motion.div>
+
+        {/* Ending */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <p className="text-foreground/60 text-center italic text-lg py-4">
+            {t("ending")}
+          </p>
+        </motion.div>
       </div>
     </div>
   );
