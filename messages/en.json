@@ -180,6 +180,8 @@
     "whatChickenDoesDesc": "A reflection on the silence of the voiceless",
     "chickenFear": "Does a Chicken Feel Fear",
     "chickenFearDesc": "Understanding a chicken's instinctive fear in a world of predators",
+    "witnessedFear": "A Scene That Pained Me",
+    "witnessedFearDesc": "A testimony to silent fear that no one sees",
     "myPoorChicken": "My Poor Chicken",
     "myPoorChickenDesc": "The story behind why Wihngo exists",
     "ethicalPosition": "Our Ethical Position",
@@ -692,6 +694,22 @@
     "enterWallet": "Please enter a wallet address to receive support",
     "uploadFailed": "Failed to upload image. Please try again.",
     "walletNotConnected": "Wallet not connected"
+  },
+  "witnessedFear": {
+    "title": "A Scene That Pained Me",
+    "intro": "I witnessed a scene that deeply pained me.",
+    "scene": "A broiler chicken opens its mouth, gasping, swallowing its saliva in repeated anxiety.\nPeople always explain this with health reasons — heat, oxygen deficiency, stress…\nBut no one talks about its psychological state.",
+    "fearStatement": "The chicken is afraid.",
+    "notWithoutReasonTitle": "Not afraid without reason",
+    "notWithoutReason": "She is inside a system that knows its end, even if it is never spoken.\nShe checks her neck unconsciously, swallows her saliva as if asking:\nIs it my turn? Is everything over?",
+    "inheritedMemoryTitle": "Inherited memory",
+    "inheritedMemory": "Some memory — call it instinctive, genetic, or inherited fear —\ntells her that the time is approaching.\nThat this place is not a place of life, but of waiting.",
+    "prisonTitle": "A prisoner waiting",
+    "prison": "The chicken here is not just an animal.\nShe is a prisoner awaiting execution.\nShe knows… or feels… or expects.",
+    "silentFear": "And she waits, in silent fear, unseen by anyone because everyone has grown accustomed to the scene.",
+    "noLanguageTitle": "Fear needs no language",
+    "noLanguage": "Perhaps the chicken does not think as we do,\nbut fear needs no language,\nnor philosophy,\nit is enough that there is a creature trapped, with no choice, no escape.",
+    "conclusion": "This is what no one said."
   },
   "admin": {
     "title": "Admin",
