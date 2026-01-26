@@ -697,19 +697,12 @@
   },
   "witnessedFear": {
     "title": "A Scene That Pained Me",
-    "intro": "I witnessed a scene that deeply pained me.",
-    "scene": "A broiler chicken opens its mouth, gasping, swallowing its saliva in repeated anxiety.\nPeople always explain this with health reasons — heat, oxygen deficiency, stress…\nBut no one talks about its psychological state.",
-    "fearStatement": "The chicken is afraid.",
-    "notWithoutReasonTitle": "Not afraid without reason",
-    "notWithoutReason": "She is inside a system that knows its end, even if it is never spoken.\nShe checks her neck unconsciously, swallows her saliva as if asking:\nIs it my turn? Is everything over?",
-    "inheritedMemoryTitle": "Inherited memory",
-    "inheritedMemory": "Some memory — call it instinctive, genetic, or inherited fear —\ntells her that the time is approaching.\nThat this place is not a place of life, but of waiting.",
-    "prisonTitle": "A prisoner waiting",
-    "prison": "The chicken here is not just an animal.\nShe is a prisoner awaiting execution.\nShe knows… or feels… or expects.",
-    "silentFear": "And she waits, in silent fear, unseen by anyone because everyone has grown accustomed to the scene.",
-    "noLanguageTitle": "Fear needs no language",
-    "noLanguage": "Perhaps the chicken does not think as we do,\nbut fear needs no language,\nnor philosophy,\nit is enough that there is a creature trapped, with no choice, no escape.",
-    "conclusion": "This is what no one said."
+    "intro": "I witnessed a scene that pained me.",
+    "scene": "A broiler chicken opens its mouth, gasping, swallowing its saliva.\nPeople always talk about the health reasons,\nbut no one spoke about the chicken's psychological state.",
+    "fearStatement": "The chicken is afraid,\nknows that her slaughter time is near,\nconstantly checking the slaughter spot:\nHave I been slaughtered now?",
+    "geneticMemory": "The genetic memory she inherits tells her that her slaughter time is approaching,\nso she is very afraid.\n\nThis is what no one said.",
+    "noLanguage": "Fear needs no language, nor philosophy,\nthe chicken is a creature trapped, with no choice, no escape.",
+    "prison": "The chicken is a prisoner awaiting execution.\nShe knows, and waits, very afraid."
   },
   "admin": {
     "title": "Admin",
