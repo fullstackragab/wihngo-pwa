@@ -28,6 +28,19 @@ export default function WitnessedFearPage() {
           </Card>
         </motion.div>
 
+        {/* Trapped */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <Card className="p-6 bg-primary/5 border-primary/20">
+            <p className="text-foreground font-medium leading-relaxed whitespace-pre-line text-center">
+              {t("trapped")}
+            </p>
+          </Card>
+        </motion.div>
+
         {/* Scene Description */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
