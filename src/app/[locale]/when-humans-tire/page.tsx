@@ -28,19 +28,6 @@ export default function WhenHumansTirePage() {
           </Card>
         </motion.div>
 
-        {/* I Was Forced - Repeated Truth */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
-          <Card className="p-6 bg-destructive/5 border-destructive/20">
-            <p className="text-foreground font-bold leading-relaxed text-center text-lg">
-              {t("forced")}
-            </p>
-          </Card>
-        </motion.div>
-
         {/* First and Second Time */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -66,9 +53,6 @@ export default function WhenHumansTirePage() {
           <Card className="p-6">
             <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
               {t("wordDoesnt")}
-            </p>
-            <p className="text-foreground font-medium leading-relaxed mt-3">
-              {t("deeperTruth")}
             </p>
           </Card>
         </motion.div>
@@ -124,9 +108,6 @@ export default function WhenHumansTirePage() {
           <Card className="p-6">
             <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
               {t("dontProtest")}
-            </p>
-            <p className="text-foreground font-medium leading-relaxed mt-3">
-              {t("theyTrust")}
             </p>
           </Card>
         </motion.div>
@@ -253,19 +234,6 @@ export default function WhenHumansTirePage() {
             </p>
             <p className="text-foreground font-bold leading-relaxed mt-3 text-lg text-center">
               {t("howToReduce")}
-            </p>
-          </Card>
-        </motion.div>
-
-        {/* How To Create */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.95 }}
-        >
-          <Card className="p-6">
-            <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
-              {t("howToCreate")}
             </p>
           </Card>
         </motion.div>
