@@ -28,6 +28,19 @@ export default function WhenHumansTirePage() {
           </Card>
         </motion.div>
 
+        {/* Human Exhausted */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+        >
+          <Card className="p-6 bg-destructive/5 border-destructive/20">
+            <p className="text-foreground font-bold leading-relaxed text-center text-lg">
+              {t("humanExhausted")}
+            </p>
+          </Card>
+        </motion.div>
+
         {/* First and Second Time */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
