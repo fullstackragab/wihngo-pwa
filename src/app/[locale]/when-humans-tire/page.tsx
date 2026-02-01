@@ -32,7 +32,7 @@ export default function WhenHumansTirePage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.15 }}
         >
           <Card className="p-6">
             <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
@@ -44,31 +44,28 @@ export default function WhenHumansTirePage() {
           </Card>
         </motion.div>
 
-        {/* Word Doesn't Justify */}
+        {/* Deeper Meaning */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="p-6">
+            <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
+              {t("deeperMeaning")}
+            </p>
+          </Card>
+        </motion.div>
+
+        {/* Not Because of Cruelty */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
         >
-          <Card className="p-6">
-            <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
-              {t("wordDoesnt")}
-            </p>
-          </Card>
-        </motion.div>
-
-        {/* Not Because Humans Are Cruel */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
           <Card className="p-6 bg-accent/30 border-accent">
-            <p className="text-foreground leading-relaxed">
+            <p className="text-foreground leading-relaxed whitespace-pre-line">
               {t("notCruelty")}
-            </p>
-            <p className="text-foreground font-bold leading-relaxed mt-2 text-lg">
-              {t("exhausted")}
             </p>
           </Card>
         </motion.div>
@@ -77,7 +74,7 @@ export default function WhenHumansTirePage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
+          transition={{ delay: 0.3 }}
         >
           <Card className="p-6">
             <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
@@ -86,50 +83,11 @@ export default function WhenHumansTirePage() {
           </Card>
         </motion.div>
 
-        {/* In Exhaustion - Things Fall */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <Card className="p-6 bg-primary/5 border-primary/20">
-            <p className="text-foreground font-medium leading-relaxed text-center">
-              {t("inExhaustion")}
-            </p>
-          </Card>
-        </motion.div>
-
-        {/* Small Creatures Don't Protest */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45 }}
-        >
-          <Card className="p-6">
-            <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
-              {t("dontProtest")}
-            </p>
-          </Card>
-        </motion.div>
-
-        {/* Trust Details */}
+        {/* When Human Drowns */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-        >
-          <Card className="p-6 bg-accent/30 border-accent">
-            <p className="text-foreground leading-relaxed whitespace-pre-line">
-              {t("trustDetails")}
-            </p>
-          </Card>
-        </motion.div>
-
-        {/* When Human Drowns in Worry */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.55 }}
         >
           <Card className="p-6 bg-destructive/5 border-destructive/20">
             <p className="text-foreground leading-relaxed whitespace-pre-line">
@@ -138,44 +96,15 @@ export default function WhenHumansTirePage() {
           </Card>
         </motion.div>
 
-        {/* Responsibility */}
+        {/* They Depend On Us */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-        >
-          <Card className="p-6">
-            <p className="text-foreground/80 leading-relaxed">
-              {t("responsibilityNot")}
-            </p>
-            <p className="text-foreground font-bold leading-relaxed mt-2 text-lg">
-              {t("heavier")}
-            </p>
-          </Card>
-        </motion.div>
-
-        {/* Because We Are Responsible */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.65 }}
+          transition={{ delay: 0.55 }}
         >
           <Card className="p-6 bg-primary/5 border-primary/20">
             <p className="text-foreground font-medium leading-relaxed whitespace-pre-line text-center">
-              {t("becauseResponsible")}
-            </p>
-          </Card>
-        </motion.div>
-
-        {/* Weak Pay The Price */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-        >
-          <Card className="p-6 bg-destructive/5 border-destructive/20">
-            <p className="text-foreground leading-relaxed whitespace-pre-line">
-              {t("weakPayPrice")}
+              {t("theyDependOnUs")}
             </p>
           </Card>
         </motion.div>
@@ -184,14 +113,11 @@ export default function WhenHumansTirePage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.75 }}
+          transition={{ delay: 0.6 }}
         >
           <Card className="p-6">
             <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
               {t("improvingLives")}
-            </p>
-            <p className="text-foreground font-bold leading-relaxed mt-3 text-lg">
-              {t("condition")}
             </p>
           </Card>
         </motion.div>
@@ -200,10 +126,10 @@ export default function WhenHumansTirePage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
+          transition={{ delay: 0.65 }}
         >
           <Card className="p-6 bg-accent/30 border-accent">
-            <p className="text-foreground font-medium leading-relaxed whitespace-pre-line">
+            <p className="text-foreground leading-relaxed whitespace-pre-line">
               {t("humanWithTime")}
             </p>
           </Card>
@@ -213,7 +139,7 @@ export default function WhenHumansTirePage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.85 }}
+          transition={{ delay: 0.7 }}
         >
           <Card className="p-6 bg-destructive/5 border-destructive/20">
             <p className="text-foreground leading-relaxed whitespace-pre-line">
@@ -222,40 +148,11 @@ export default function WhenHumansTirePage() {
           </Card>
         </motion.div>
 
-        {/* The Question */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9 }}
-        >
-          <Card className="p-6 bg-primary/5 border-primary/20">
-            <p className="text-foreground leading-relaxed">
-              {t("question")}
-            </p>
-            <p className="text-foreground font-bold leading-relaxed mt-3 text-lg text-center">
-              {t("howToReduce")}
-            </p>
-          </Card>
-        </motion.div>
-
-        {/* We Are Responsible */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.0 }}
-        >
-          <Card className="p-6 bg-accent/30 border-accent">
-            <p className="text-foreground leading-relaxed whitespace-pre-line">
-              {t("responsible")}
-            </p>
-          </Card>
-        </motion.div>
-
         {/* Not Just A Chicken */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.05 }}
+          transition={{ delay: 0.75 }}
         >
           <Card className="p-6">
             <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
@@ -268,7 +165,7 @@ export default function WhenHumansTirePage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.1 }}
+          transition={{ delay: 0.8 }}
         >
           <Card className="p-6 bg-destructive/5 border-destructive/20">
             <p className="text-foreground font-bold leading-relaxed whitespace-pre-line text-center text-lg">
