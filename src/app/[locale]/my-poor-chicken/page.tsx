@@ -39,13 +39,6 @@ export default function MyPoorChickenPage() {
               {t("story")}
             </p>
           </div>
-
-          {/* Responsibility */}
-          <div className="pt-4">
-            <p className="text-lg leading-relaxed text-neutral-700 font-medium whitespace-pre-line">
-              {t("responsibility")}
-            </p>
-          </div>
         </motion.div>
       </div>
     </div>
