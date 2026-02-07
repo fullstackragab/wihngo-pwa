@@ -184,6 +184,8 @@
     "witnessedFearDesc": "A testimony to silent fear that no one sees",
     "noFearBeforeDeath": "No Need for Fear Before Death",
     "noFearBeforeDeathDesc": "Death is fate, but fear before it is our responsibility",
+    "whatChickenNeeds": "What a Chicken Needs",
+    "whatChickenNeedsDesc": "Simple needs for a quiet life",
     "whenHumansTire": "When Humans Tire",
     "whenHumansTireDesc": "Small creatures pay the price",
     "myPoorChicken": "My Poor Chicken",
@@ -741,6 +743,14 @@
     "noLanguage": "Fear needs no language, nor philosophy,\nthe chicken is a creature trapped, with no choice, no escape.",
     "prison": "The chicken is a prisoner awaiting execution.\nShe knows, and waits, very afraid.",
     "ending": "The poor, helpless chicken"
+  },
+  "whatChickenNeeds": {
+    "title": "What a Chicken Needs",
+    "simpleNeeds": "Everything a chicken needs is very simple:\nA place it knows is home.\nSpace to move without disturbance.\nSafety from constant meddling, intimidation, and unnecessary intrusion.",
+    "weakCreature": "A chicken is a fragile creature.\nIt has no hands to build shelter,\nno tools to protect itself,\nand no ability to object or leave.\nWhen we tamper with it, we do so because it is exposed,\nand because we are the stronger ones in this situation.",
+    "naturalRoutine": "If we let it live its natural routine:\nWake up, eat, move around a little,\nrest in the shade at noon,\nthen return to its place at sunset,\nthat alone is a sufficient life for it.",
+    "minimalNeeds": "It does not need major improvements,\nnor a perfect environment.\nA minimum level of stability is enough,\nand a small home where it feels safe,\neven if it is very simple.",
+    "conclusion": ""
   },
   "admin": {
     "title": "Admin",

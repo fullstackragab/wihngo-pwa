@@ -529,6 +529,18 @@ export default function ProfilePage() {
               </div>
             </div>
           </Link>
+
+          <Link href="/what-chicken-needs">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{t("whatChickenNeeds")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {t("whatChickenNeedsDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
         </motion.div>
 
         {/* Language Selection */}
