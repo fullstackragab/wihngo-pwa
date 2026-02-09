@@ -94,17 +94,6 @@ export default function AreWeMonstersPage() {
         </motion.div>
 
         {/* The Alternative */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-        >
-          <Card className="p-6 bg-accent/30 border-accent">
-            <p className="text-foreground leading-relaxed whitespace-pre-line">
-              {t("theAlternative")}
-            </p>
-          </Card>
-        </motion.div>
 
       </div>
     </div>
