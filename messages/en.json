@@ -190,6 +190,10 @@
     "whenHumansTireDesc": "Small creatures pay the price",
     "myPoorChicken": "My Poor Chicken",
     "myPoorChickenDesc": "The story behind why Wihngo exists",
+    "areWeMonsters": "Are We Monsters\nHow does the poor chicken feel while we cage her",
+    "arWeMonstersDesc": "The story of a creature, a cage, and a question we avoid",
+    "myRooster": "My Rooster",
+    "myRoosterDesc": "A mischievous rooster I laughed with and grieved for",
     "ethicalPosition": "Our Ethical Position",
     "ourPrinciples": "Our Principles",
     "ourPrinciplesDesc": "What we believe and how we operate",
@@ -751,6 +755,22 @@
     "naturalRoutine": "If we let it live its natural routine:\nWake up, eat, move around a little,\nrest in the shade at noon,\nthen return to its place at sunset,\nthat alone is a sufficient life for it.",
     "minimalNeeds": "It does not need major improvements,\nnor a perfect environment.\nA minimum level of stability is enough,\nand a small home where it feels safe,\neven if it is very simple.",
     "conclusion": ""
+  },
+  "areWeMonsters": {
+    "title": "Are We Monsters\nHow does the poor chicken feel while we cage her",
+    "childhoodStory": "When I was young, they told me a story about a creature that locked humans in a cage to eat them, but they managed to escape.\nWhen I look at the poor chicken that humans cage to eat,\nwhat is the difference?",
+    "areWeMonsters": "Are we monsters?\nHow does the poor chicken feel while we cage her?",
+    "apexPredator": "Artificial intelligence said that humans are predators, at the top of all predators.\nThat is why when I sit next to my chicken, I find her gaze empty, devoid of emotion.",
+    "emptyGaze": "What can she do when she knows she is in the possession of a predator, and that any moment could be her end?",
+    "caringFromAfar": "In truth, after realizing this, I began leaving her space to live without disturbing her.\nI feel so sorry for her.",
+    "worldSadness": "Perhaps this is why we feel sadness in this world, as we slaughter all creatures.",
+    "theAlternative": "The alternative is not easy and needs a long time, so we do not cause disruption to any system and so the consequences are not worse."
+  },
+  "myRooster": {
+    "title": "My Rooster",
+    "theRooster": "I had a small number of chickens. Today, one of them died — a magnificent and beautiful rooster who used to crow constantly.",
+    "hisCharacter": "He was always mischievous, hitting all the other chickens.\nI used to stop him from hitting them while laughing, not knowing why, and I never punished him.",
+    "theLoss": "I was so sad when he died.\nWhere did he go, and how is he now?"
   },
   "admin": {
     "title": "Admin",
