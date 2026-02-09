@@ -17,7 +17,6 @@ import {
   Bird as BirdIcon,
   LogOut,
   Info,
-  BookOpen,
   HandHeart,
   Feather,
   Scale,
@@ -417,126 +416,6 @@ export default function ProfilePage() {
                 <h4 className="mb-1">{t("openCall")}</h4>
                 <p className="text-sm text-muted-foreground">
                   {t("openCallDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-        </motion.div>
-
-        {/* Our Ethical Position Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.18 }}
-          className="space-y-3"
-        >
-          <h3 className="text-sm font-medium text-muted-foreground px-1">
-            {t("ethicalPosition")}
-          </h3>
-
-          <Link href="/my-poor-chicken">
-            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
-              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="mb-1">{t("myPoorChicken")}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t("myPoorChickenDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/chicken-happiness">
-            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
-              <BookOpen className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="mb-1">{t("chickenHappiness")}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t("chickenHappinessDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/life-before-fate">
-            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
-              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="mb-1">{t("lifeBeforeFate")}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t("lifeBeforeFateDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/what-chicken-does">
-            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
-              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="mb-1">{t("whatChickenDoes")}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t("whatChickenDoesDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/chicken-fear">
-            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
-              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="mb-1">{t("chickenFear")}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t("chickenFearDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/witnessed-fear">
-            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
-              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="mb-1">{t("witnessedFear")}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t("witnessedFearDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/no-fear-before-death">
-            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
-              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="mb-1">{t("noFearBeforeDeath")}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t("noFearBeforeDeathDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/when-humans-tire">
-            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
-              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="mb-1">{t("whenHumansTire")}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t("whenHumansTireDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/what-chicken-needs">
-            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
-              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="mb-1">{t("whatChickenNeeds")}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t("whatChickenNeedsDesc")}
                 </p>
               </div>
             </div>

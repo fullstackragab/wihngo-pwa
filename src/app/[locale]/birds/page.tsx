@@ -7,10 +7,11 @@ import { BirdCard } from "@/components/bird-card";
 import { BottomNav } from "@/components/bottom-nav";
 import { BirdGridSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Bird as BirdIcon, Search, X } from "lucide-react";
+import { Bird as BirdIcon, Search, X, Heart, BookOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Bird, BirdNeedsSupportDto } from "@/types/bird";
 import { motion, AnimatePresence } from "motion/react";
+import Link from "next/link";
 
 type FilterType = "needsSupport" | "all";
 
@@ -20,6 +21,7 @@ export default function BirdsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const t = useTranslations("birds");
+  const tProfile = useTranslations("profile");
 
   // Fetch birds needing support (default view)
   const {
@@ -204,6 +206,128 @@ export default function BirdsPage() {
               </Button>
             </div>
           )}
+      </div>
+
+      {/* Our Ethical Position Section */}
+      <div className="max-w-6xl mx-auto px-4 pb-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+          className="space-y-3"
+        >
+          <h3 className="text-sm font-medium text-muted-foreground px-1">
+            {tProfile("ethicalPosition")}
+          </h3>
+
+          <Link href="/my-poor-chicken">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{tProfile("myPoorChicken")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {tProfile("myPoorChickenDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/chicken-happiness">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <BookOpen className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{tProfile("chickenHappiness")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {tProfile("chickenHappinessDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/life-before-fate">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{tProfile("lifeBeforeFate")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {tProfile("lifeBeforeFateDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/what-chicken-does">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{tProfile("whatChickenDoes")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {tProfile("whatChickenDoesDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/chicken-fear">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{tProfile("chickenFear")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {tProfile("chickenFearDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/witnessed-fear">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{tProfile("witnessedFear")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {tProfile("witnessedFearDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/no-fear-before-death">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{tProfile("noFearBeforeDeath")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {tProfile("noFearBeforeDeathDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/when-humans-tire">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{tProfile("whenHumansTire")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {tProfile("whenHumansTireDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/what-chicken-needs">
+            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
+              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="mb-1">{tProfile("whatChickenNeeds")}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {tProfile("whatChickenNeedsDesc")}
+                </p>
+              </div>
+            </div>
+          </Link>
+        </motion.div>
       </div>
 
       {/* Bottom Nav spacer */}
