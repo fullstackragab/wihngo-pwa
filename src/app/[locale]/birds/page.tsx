@@ -328,18 +328,6 @@ export default function BirdsPage() {
             </div>
           </Link>
 
-          <Link href="/are-we-monsters">
-            <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
-              <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="mb-1">{tProfile("areWeMonsters")}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {tProfile("arWeMonstersDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-
           <Link href="/my-rooster">
             <div className="flex gap-3 p-4 bg-card rounded-xl border border-border/50">
               <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
